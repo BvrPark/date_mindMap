@@ -255,6 +255,14 @@
     margin:0!important;
   }
 
+
+  .hoursActions{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .hoursActionHint{margin:0;color:var(--sub);font-size:12px;text-align:left}
+  .hoursActions .hoursAdd{width:100%;min-height:46px;font-size:14px}
+  .hoursClosedRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:6px;padding-top:12px;border-top:1px solid var(--line)}
+  .hoursClosedRow span{font-size:12px;color:var(--sub)}
+  .hoursActions .hoursClosed{min-height:44px;padding:0 14px;background:transparent;color:#9c4946;border:0!important;text-decoration:underline;text-underline-offset:4px;flex-shrink:0}
+  .hoursActions button:focus-visible,.mapRetry:focus-visible{outline:3px solid var(--p3);outline-offset:3px}
 </style>
 </head>
 <body>
@@ -282,7 +290,7 @@
   <!-- 지도 -->
   <div class="view">
     <div id="map"></div>
-    <div class="mapState" id="mapState"><div class="mapStateCard"><div class="mapStateIcon">⌖</div><b id="mapStateTitle">지도를 불러오는 중</b><p id="mapStateText">잠시만 기다려 주세요.</p><button class="mapRetry" id="mapRetry" style="display:none" onclick="location.reload()">다시 불러오기</button></div></div>
+    <div class="mapState" id="mapState" role="status" aria-live="polite" aria-busy="true"><div class="mapStateCard"><div class="mapStateIcon">⌖</div><b id="mapStateTitle">지도를 불러오는 중</b><p id="mapStateText">잠시만 기다려 주세요.</p><button class="mapRetry" id="mapRetry" style="display:none" onclick="location.reload()">다시 시도</button></div></div>
     <div class="hint" id="hint">지도를 누르면 근처 장소를 골라 추가할 수 있어요</div>
   </div>
 
@@ -427,7 +435,7 @@ let editingId = null, pending = null, filter = 'all', resCache = [], hoursDraft=
 function localPlaces(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s) return JSON.parse(s); }catch(e){} return null; }
 function save(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
-  if(!currentUser || !db) return;
+  if(!currentUser || !db || !appReady) return;
   $('syncBadge').classList.add('show');
   clearTimeout(syncTimer);
   syncTimer=setTimeout(syncAllPlaces,350);
@@ -517,88 +525,105 @@ function loginError(e){
   if(e.code==='auth/popup-blocked') return '브라우저에서 팝업이 차단됐어요. 이 사이트의 팝업을 허용한 뒤 다시 눌러 주세요.';
   return '로그인할 수 없어요: '+(e.message||e.code||'설정을 확인해 주세요.');
 }
+// Only this coordinator may reveal the map. Late results never dismiss an error.
+let startupGeneration=0, appReady=false;
+function lockApp(locked){
+  document.querySelectorAll('.top,.nav,#map').forEach(el=>el.inert=locked);
+}
+function cachePlaces(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(places));}catch(e){console.warn('Local backup unavailable',e);}}
 async function handleAuth(user){
-  if(!user){currentUser=null;$('loginGate').classList.remove('hide');return;}
-  currentUser=user;$('loginGate').classList.add('hide');
-  // 지도와 Firestore는 서로 기다리지 않고 병렬로 시작합니다.
-  if(!map) startKakao(); else {map.relayout();renderMarkers();}
+  const generation=++startupGeneration;
+  appReady=false; lockApp(true); clearTimeout(syncTimer);
+  if(unsubscribePlaces){unsubscribePlaces();unsubscribePlaces=null;}
+  currentUser=user;
+  if(!user){places=[];$('loginGate').classList.remove('hide');return;}
+  $('loginGate').classList.add('hide');
+  $('mapState').classList.remove('hide');
+  $('mapState').setAttribute('aria-busy','true');
+  $('mapStateTitle').textContent='지도와 내 장소를 불러오는 중';
+  $('mapStateText').textContent='서버의 최신 데이터를 확인하고 있어요.';
+  $('mapRetry').style.display='none';
+  let expired=false, timer;
+  const active=()=>!expired && generation===startupGeneration && currentUser===user;
   try{
-    await Promise.race([
-      loadUserPlaces(),
-      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firestore timeout')),6000))
+    const result=await Promise.race([
+      Promise.all([startKakao(active),loadUserPlaces(user,active)]),
+      new Promise((_,reject)=>{timer=setTimeout(()=>{
+        expired=true;
+        reject(new Error('25초 안에 지도와 서버 데이터를 모두 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.'));
+      },25000);})
     ]);
-    startPlaceListener();
+    if(!active()) return;
+    places=result[1]; cachePlaces(); renderMarkers();
+    appReady=true; lockApp(false);
+    $('mapState').setAttribute('aria-busy','false');
+    $('mapState').classList.add('hide');
+    startPlaceListener(user,generation); autoLocate();
   }catch(e){
+    expired=true;
+    if(generation!==startupGeneration) return;
     console.error(e);
-    const local=localPlaces(); places=(local&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
-    renderMarkers(); toast('온라인 데이터가 지연되어 기기 저장본을 표시해요');
-    // Listener still allows recovery when Firestore becomes available later.
-    startPlaceListener();
-  }
+    const message=e.code==='permission-denied'?'서버 데이터 접근 권한이 없어요. 로그인 계정과 Firestore 보안 규칙을 확인해 주세요.':
+      e.code==='unavailable'?'서버에 연결할 수 없어요. 인터넷 연결을 확인하고 다시 시도해 주세요.':
+      e.message||'데이터를 불러오지 못했어요. 다시 시도해 주세요.';
+    showMapError('불러오지 못했어요',message);
+  }finally{clearTimeout(timer);}
 }
-async function loadUserPlaces(){
-  const ref=db.collection('users').doc(currentUser.uid).collection('places');
-  const snap=await ref.get();
+async function loadUserPlaces(user,active){
+  const ref=db.collection('users').doc(user.uid).collection('places');
+  let snap=await ref.get({source:'server'});
+  if(!active()) throw new Error('취소된 요청');
   if(snap.empty){
-    const local=localPlaces(); places=(local&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
-    await syncAllPlaces();
-  }else places=snap.docs.map(d=>({id:d.id,...d.data(),updatedAt:undefined}));
-  localStorage.setItem(STORAGE_KEY,JSON.stringify(places));
-  renderMarkers();
+    // Preserve first-use migration only after the server confirms an empty account.
+    const local=localPlaces();
+    const seed=(Array.isArray(local)&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
+    const batch=db.batch();
+    seed.forEach(p=>batch.set(ref.doc(String(p.id)),{...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+    await batch.commit();
+    if(!active()) throw new Error('취소된 요청');
+    snap=await ref.get({source:'server'});
+  }
+  if(!active()) throw new Error('취소된 요청');
+  return snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return{id:d.id,...x};});
 }
-function startPlaceListener(){
+function startPlaceListener(user,generation){
   if(unsubscribePlaces) unsubscribePlaces();
-  unsubscribePlaces=db.collection('users').doc(currentUser.uid).collection('places').onSnapshot(snap=>{
+  unsubscribePlaces=db.collection('users').doc(user.uid).collection('places').onSnapshot({includeMetadataChanges:true},snap=>{
+    if(generation!==startupGeneration || !appReady || snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
     places=snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return{id:d.id,...x};});
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(places)); renderMarkers();
+    cachePlaces(); renderMarkers();
     if($('lbody')) renderListBody(filter==='rec'?'rec':'all');
-  },e=>{console.error(e);toast('데이터 동기화에 실패했어요');});
+  },e=>{
+    if(generation!==startupGeneration) return;
+    appReady=false;lockApp(true);closeSheet();
+    showMapError('동기화가 중단됐어요','서버 연결 또는 접근 권한을 확인하고 다시 시도해 주세요.');
+    console.error(e);
+  });
 }
 async function logout(){ if(confirm('로그아웃할까요?')){if(unsubscribePlaces)unsubscribePlaces();await auth.signOut();location.reload();} }
 function showMapError(title, text){
+  $('mapState').setAttribute('aria-busy','false');
   $('mapStateTitle').textContent=title; $('mapStateText').textContent=text;
   $('mapRetry').style.display='inline-block'; $('mapState').classList.remove('hide');
 }
-function startKakao(){
-  const key=getKey();
-  if(location.protocol==='file:'||!key){
-    showMapError('카카오맵 설정이 필요해요','카카오 JavaScript 키가 없거나 파일로 직접 열렸어요.');
-    return;
-  }
-  $('mapStateTitle').textContent='지도를 불러오는 중';
-  $('mapStateText').textContent='잠시만 기다려 주세요.';
-  $('mapRetry').style.display='none';
-  $('mapState').classList.remove('hide');
-
-  let finished=false;
-  const failTimer=setTimeout(()=>{
-    if(!finished) showMapError('지도 연결을 확인해 주세요','카카오맵 응답이 없어요. JavaScript SDK 도메인과 카카오맵 사용 설정을 확인해 주세요.');
-  },10000);
-
-  const script=document.createElement('script');
-  script.async=true;
-  script.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
-  script.onload=()=>{
-    if(!window.kakao||!kakao.maps||typeof kakao.maps.load!=='function'){
-      clearTimeout(failTimer);
-      showMapError('카카오맵 인증 오류','SDK가 정상적으로 준비되지 않았어요. JavaScript 키와 SDK 도메인을 확인해 주세요.');
-      return;
-    }
-    kakao.maps.load(()=>{
-      try{
-        if(typeof kakao.maps.LatLng!=='function'||typeof kakao.maps.Map!=='function') throw new Error('카카오 지도 본체가 준비되지 않았어요.');
-        init(); finished=true; clearTimeout(failTimer);
-      }catch(e){
-        console.error(e); clearTimeout(failTimer);
-        showMapError('지도 초기화 오류',e.message||'카카오맵을 초기화하지 못했어요.');
-      }
-    });
-  };
-  script.onerror=()=>{
-    clearTimeout(failTimer);
-    showMapError('카카오맵 연결 오류','카카오맵 SDK를 내려받지 못했어요. JavaScript 키, SDK 도메인, 네트워크를 확인해 주세요.');
-  };
-  document.head.appendChild(script);
+function startKakao(active){
+  return new Promise((resolve,reject)=>{
+    const key=getKey();
+    if(location.protocol==='file:'||!key){reject(new Error('등록된 웹 주소로 열어 주세요. 카카오 JavaScript 키와 허용 도메인 설정도 확인해 주세요.'));return;}
+    const script=document.createElement('script');
+    script.async=true;
+    script.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
+    script.onerror=()=>reject(new Error('카카오맵을 내려받지 못했어요. 네트워크와 JavaScript 키, 허용 도메인을 확인해 주세요.'));
+    script.onload=()=>{
+      if(!active()) return;
+      if(!window.kakao?.maps?.load){reject(new Error('카카오맵 인증에 실패했어요. JavaScript 키와 SDK 도메인을 확인해 주세요.'));return;}
+      kakao.maps.load(()=>{
+        if(!active()) return;
+        try{init(()=>{if(active()) resolve();});}catch(e){reject(new Error('지도 초기화에 실패했어요: '+e.message));}
+      });
+    };
+    document.head.appendChild(script);
+  });
 }
 async function diagnose(key){
   let msg='';
@@ -616,21 +641,20 @@ async function diagnose(key){
 
 /* ---------- 초기화 ---------- */
 window.addEventListener('resize',()=>{if(map)map.relayout();});
-function init(){
+function init(onTilesReady){
   const mapEl=$('map');
   map=new kakao.maps.Map(mapEl,{center:new kakao.maps.LatLng(37.50,126.92),level:10,draggable:true,scrollwheel:true});
   ps=new kakao.maps.services.Places();
   geocoder=new kakao.maps.services.Geocoder();
-  $('mapState').classList.add('hide');
-  kakao.maps.event.addListener(map,'tilesloaded',()=>{$('mapState').classList.add('hide');});
+  const tilesReady=()=>{kakao.maps.event.removeListener(map,'tilesloaded',tilesReady);onTilesReady();};
+  kakao.maps.event.addListener(map,'tilesloaded',tilesReady);
   kakao.maps.event.addListener(map,'click',e=>{
     const pt=map.getProjection().pointFromCoords(e.latLng);
     showTapPulse(pt.x,pt.y);
     onMapClick(e.latLng);
   });
   setTimeout(()=>{map.relayout();map.setCenter(new kakao.maps.LatLng(37.50,126.92));},100);
-  renderMarkers(); autoLocate();
-  setTimeout(()=>{if(!$('mapState').classList.contains('hide'))showMapError('지도 타일이 표시되지 않아요','카카오 개발자 콘솔에서 현재 GitHub Pages 도메인이 JavaScript SDK 도메인에 등록됐는지 확인해 주세요.');},9000);
+  renderMarkers();
 }
 function showTapPulse(x,y){
   const d=document.createElement('div');d.className='tapPulse';d.style.left=x+'px';d.style.top=y+'px';$('map').appendChild(d);setTimeout(()=>d.remove(),500);
@@ -861,7 +885,7 @@ function openForm(id){
         <button type="button" class="hoursTimeBtn" id="hoursEndBtn" onclick="openHoursTimePicker('hoursEnd','종료 시간')"><small>종료</small><strong id="hoursEndDisplay">오후 06:00</strong><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
         <input type="hidden" id="hoursStart" value="10:00"><input type="hidden" id="hoursEnd" value="18:00">
       </div>
-      <div class="hoursActions"><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">선택 요일에 시간 적용</button><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">선택 요일 휴무</button></div>
+      <div class="hoursActions"><p class="hoursActionHint">선택한 요일에 적용</p><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">시간 적용</button><div class="hoursClosedRow"><span>영업하지 않는 날은</span><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">휴무 지정</button></div></div>
       <div class="hoursList" id="hoursList"></div><div class="hoursPreview" id="hoursPreview"></div>
       <div class="manualHours" id="manualHours"><input type="text" id="f_hours_manual" value="${esc(p.hours||'')}" placeholder="예: 매일 10:00~18:00 / 월요일 휴무"></div>
     </div><input type="hidden" id="f_hours" value="${esc(p.hours||'')}"></div>
