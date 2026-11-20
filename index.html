@@ -277,7 +277,7 @@
    ★ 여기에 카카오 JavaScript 키를 넣으면 키 입력 없이 바로 실행돼요
    (JavaScript 키는 등록한 도메인에서만 동작하므로 공개돼도 안전)
    ============================================================ */
-const KAKAO_KEY = "b2fc031427d4b586d087d71fbae94f90";
+const KAKAO_KEY = 'b2fc031427d4b586d087d71fbae94f90';
 
 /* Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성의 값을 넣으세요. */
 const FIREBASE_CONFIG = {
@@ -348,7 +348,6 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function $(id){return document.getElementById(id);}
 // 안내 문구는 지도 성공 여부와 관계없이 앱 진입 3초 후 숨깁니다.
 setTimeout(()=>{const h=document.getElementById('hint');if(h)h.classList.add('hide');},3000);
-setTimeout(()=>{const st=document.getElementById('mapState');if(st && !st.classList.contains('hide')) showMapError('지도 연결을 확인해 주세요','카카오맵 응답이 없어요. JavaScript SDK 도메인과 카카오맵 사용 설정을 확인한 뒤 다시 불러와 주세요.');},8000);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2000);}
 
 /* ---------- 바텀시트 ---------- */
@@ -467,31 +466,38 @@ function startKakao(){
   }
   $('mapStateTitle').textContent='지도를 불러오는 중';
   $('mapStateText').textContent='잠시만 기다려 주세요.';
+  $('mapRetry').style.display='none';
   $('mapState').classList.remove('hide');
-  let completed=false;
-  const watchdog=setTimeout(()=>{
-    if(!completed) showMapError('지도를 불러오지 못했어요','카카오맵 SDK 응답이 없습니다. 카카오 개발자 콘솔의 JavaScript SDK 도메인과 카카오맵 사용 설정을 확인해 주세요.');
-  },7000);
-  const s=document.createElement('script');
-  s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services';
-  s.onload=()=>{
-    if(!window.kakao||!kakao.maps){
-      clearTimeout(watchdog);
-      showMapError('카카오맵 인증 오류','JavaScript 키 또는 JavaScript SDK 도메인 등록을 확인해 주세요.');
+
+  let finished=false;
+  const failTimer=setTimeout(()=>{
+    if(!finished) showMapError('지도 연결을 확인해 주세요','카카오맵 응답이 없어요. JavaScript SDK 도메인과 카카오맵 사용 설정을 확인해 주세요.');
+  },10000);
+
+  const script=document.createElement('script');
+  script.async=true;
+  script.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
+  script.onload=()=>{
+    if(!window.kakao||!kakao.maps||typeof kakao.maps.load!=='function'){
+      clearTimeout(failTimer);
+      showMapError('카카오맵 인증 오류','SDK가 정상적으로 준비되지 않았어요. JavaScript 키와 SDK 도메인을 확인해 주세요.');
       return;
     }
-    try{
-      init(); completed=true; clearTimeout(watchdog);
-    }catch(e){
-      console.error(e); clearTimeout(watchdog);
-      showMapError('지도 초기화 오류',e.message||'카카오맵을 초기화하지 못했어요.');
-    }
+    kakao.maps.load(()=>{
+      try{
+        if(typeof kakao.maps.LatLng!=='function'||typeof kakao.maps.Map!=='function') throw new Error('카카오 지도 본체가 준비되지 않았어요.');
+        init(); finished=true; clearTimeout(failTimer);
+      }catch(e){
+        console.error(e); clearTimeout(failTimer);
+        showMapError('지도 초기화 오류',e.message||'카카오맵을 초기화하지 못했어요.');
+      }
+    });
   };
-  s.onerror=()=>{
-    clearTimeout(watchdog);
+  script.onerror=()=>{
+    clearTimeout(failTimer);
     showMapError('카카오맵 연결 오류','카카오맵 SDK를 내려받지 못했어요. JavaScript 키, SDK 도메인, 네트워크를 확인해 주세요.');
   };
-  document.head.appendChild(s);
+  document.head.appendChild(script);
 }
 async function diagnose(key){
   let msg='';
