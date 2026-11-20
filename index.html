@@ -1038,17 +1038,39 @@ function addHoursBlock(closed){
 function removeHoursBlock(i){hoursDraft.splice(i,1);renderHoursList();}
 function orderedHours(schedule){
   const rank=x=>Math.min(...(x.days||[]).map(d=>(Number(d)+6)%7),7);
-  return [...schedule].sort((a,b)=>rank(a)-rank(b)||(a.start||'').localeCompare(b.start||''));
+  return [...schedule].sort((a,b)=>Number(!!a.closed)-Number(!!b.closed)||rank(a)-rank(b)||(a.start||'').localeCompare(b.start||''));
 }
 function normalizeHoursText(value){
   const text=String(value||'');
   const parts=text.split(/\s*\/\s*/);
-  // Reorder labelled groups only; leave free-form descriptions untouched.
-  if(parts.length<2 || !parts.every(part=>/^(매일|평일|주말)(?:\s|$)/.test(part))) return text;
+  // Move explicitly labelled closures last without rewriting free-form descriptions.
+  if(parts.length<2) return text;
+  const closures=parts.filter(part=>/휴무\s*$/.test(part));
+  const opening=parts.filter(part=>!/휴무\s*$/.test(part));
   const rank=part=>part.startsWith('매일')?0:part.startsWith('평일')?1:2;
-  return parts.sort((a,b)=>rank(a)-rank(b)).join(' / ');
+  if(opening.every(part=>/^(매일|평일|주말)(?:\s|$)/.test(part))) opening.sort((a,b)=>rank(a)-rank(b));
+  return [...opening,...closures].join(' / ');
 }
-function formatHours(schedule=hoursDraft){return orderedHours(schedule).map(x=>`${dayLabel(x.days)} ${x.closed?'휴무':x.start+'~'+x.end}`).join(' / ');}
+function formatHours(schedule=hoursDraft){
+  const closedDays=new Set(schedule.filter(x=>x.closed).flatMap(x=>x.days));
+  const groups=new Map();
+  schedule.filter(x=>!x.closed).forEach(x=>{
+    const key=JSON.stringify([x.start,x.end]);
+    if(!groups.has(key)) groups.set(key,{start:x.start,end:x.end,days:[]});
+    const group=groups.get(key);
+    group.days=[...new Set([...group.days,...x.days.filter(d=>!closedDays.has(d))])];
+  });
+  const label=days=>{
+    // Closed days are exceptions to the displayed recurring hours, not open days.
+    for(const target of [[0,1,2,3,4,5,6],[1,2,3,4,5],[0,6]]){
+      if(days.every(d=>target.includes(d)) && target.every(d=>days.includes(d)||closedDays.has(d))) return dayLabel(target);
+    }
+    return dayLabel(days);
+  };
+  const parts=orderedHours([...groups.values()].filter(x=>x.days.length)).map(x=>`${label(x.days)} ${x.start}~${x.end}`);
+  if(closedDays.size) parts.push(`${dayLabel([...closedDays])} 휴무`);
+  return parts.join(' / ');
+}
 function displayHours(place){return Array.isArray(place.hoursSchedule)&&place.hoursSchedule.length?formatHours(place.hoursSchedule):normalizeHoursText(place.hours);}
 function renderHoursList(){
   const list=$('hoursList'),preview=$('hoursPreview');if(!list||!preview)return;
