@@ -558,12 +558,21 @@ async function handleAuth(user){
   $('mapRetry').style.display='none';
   let expired=false, timer;
   const active=()=>!expired && generation===startupGeneration && currentUser===user;
+  const stages={map:'지도 준비 중',data:'서버 응답 대기 중'};
+  const progress=(key,text)=>{
+    if(!active()) return;
+    stages[key]=text;
+    $('mapStateText').textContent=stages.map+' · '+stages.data;
+  };
   try{
     const result=await Promise.race([
-      Promise.all([startKakao(active),loadUserPlaces(user,active)]),
+      Promise.all([
+        startKakao(active).then(value=>{progress('map','지도 준비 완료');return value;}),
+        loadUserPlaces(user,active,text=>progress('data',text)).then(value=>{progress('data','서버 데이터 확인 완료');return value;})
+      ]),
       new Promise((_,reject)=>{timer=setTimeout(()=>{
         expired=true;
-        reject(new Error('25초 안에 지도와 서버 데이터를 모두 불러오지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.'));
+        reject(new Error('연결 대기 시간이 초과됐어요.\n'+stages.map+' / '+stages.data+'\n연결을 확인하고 다시 시도해 주세요.'));
       },25000);})
     ]);
     if(!active()) return;
@@ -579,10 +588,10 @@ async function handleAuth(user){
     const message=e.code==='permission-denied'?'서버 데이터 접근 권한이 없어요. 로그인 계정과 Firestore 보안 규칙을 확인해 주세요.':
       e.code==='unavailable'?'서버에 연결할 수 없어요. 인터넷 연결을 확인하고 다시 시도해 주세요.':
       e.message||'데이터를 불러오지 못했어요. 다시 시도해 주세요.';
-    showMapError('불러오지 못했어요',message);
+    showMapError('불러오지 못했어요',message+'\n'+(e.code?'오류 코드: '+e.code:''));
   }finally{clearTimeout(timer);}
 }
-async function loadUserPlaces(user,active){
+async function loadUserPlaces(user,active,report=()=>{}){
   const ref=db.collection('users').doc(user.uid).collection('places');
   let snap=await ref.get({source:'server'});
   if(!active()) throw new Error('취소된 요청');
@@ -592,8 +601,10 @@ async function loadUserPlaces(user,active){
     const seed=(Array.isArray(local)&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
     const batch=db.batch();
     seed.forEach(p=>batch.set(ref.doc(String(p.id)),{...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}));
+    report('첫 장소 목록을 서버에 저장 중');
     await batch.commit();
     if(!active()) throw new Error('취소된 요청');
+    report('저장한 서버 데이터 확인 중');
     snap=await ref.get({source:'server'});
   }
   if(!active()) throw new Error('취소된 요청');
@@ -648,9 +659,10 @@ function prepareKakaoSDK(){
 async function startKakao(active){
   await prepareKakaoSDK();
   if(!active()) throw new Error('취소된 요청');
-  return new Promise((resolve,reject)=>{
-    try{init(()=>{if(active()) resolve();});}catch(e){reject(new Error('지도 초기화에 실패했어요: '+e.message));}
-  });
+  // SDK readiness and a constructed map are the startup condition.
+  // tilesloaded is a movement event, not a guaranteed one-time ready signal.
+  try{init();}catch(e){throw new Error('지도 초기화에 실패했어요: '+e.message);}
+
 }
 async function diagnose(key){
   let msg='';
@@ -668,13 +680,11 @@ async function diagnose(key){
 
 /* ---------- 초기화 ---------- */
 window.addEventListener('resize',()=>{if(map)map.relayout();});
-function init(onTilesReady){
+function init(){
   const mapEl=$('map');
   map=new kakao.maps.Map(mapEl,{center:new kakao.maps.LatLng(37.50,126.92),level:10,draggable:true,scrollwheel:true});
   ps=new kakao.maps.services.Places();
   geocoder=new kakao.maps.services.Geocoder();
-  const tilesReady=()=>{kakao.maps.event.removeListener(map,'tilesloaded',tilesReady);onTilesReady();};
-  kakao.maps.event.addListener(map,'tilesloaded',tilesReady);
   kakao.maps.event.addListener(map,'click',e=>{
     const pt=map.getProjection().pointFromCoords(e.latLng);
     showTapPulse(pt.x,pt.y);
