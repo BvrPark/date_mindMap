@@ -177,16 +177,24 @@
   }
 
 
-  /* ---------- 간편 운영시간 설정 ---------- */
+  /* 검색 접기 및 장소 추가 메뉴 */
+  .searchFold{width:28px;height:28px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:17px;line-height:1;transition:transform .2s}
+  .hcard.searchCollapsed{padding-bottom:11px}.hcard.searchCollapsed .sbox{display:none}.hcard.searchCollapsed .searchFold{transform:rotate(180deg)}
+  .addHero{padding:4px 2px 8px}.addHero p{font-size:12px;color:var(--sub);line-height:1.55;margin-bottom:12px}
+  .addChoice{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--line);background:#fff;border-radius:16px;padding:14px 13px;margin-bottom:9px;text-align:left}
+  .addChoice:active{background:var(--pll)}.addChoiceIcon{width:44px;height:44px;border-radius:14px;background:var(--pl);color:var(--p3);display:flex;align-items:center;justify-content:center;flex:0 0 auto}.addChoiceIcon svg{width:23px;height:23px}
+  .addChoiceText{flex:1;min-width:0}.addChoiceText b{display:block;font-size:14px;color:var(--tx)}.addChoiceText span{display:block;font-size:11.5px;color:var(--sub);margin-top:3px}.addChoiceArrow{color:#b5b6b0;font-size:19px}
+  /* 이동시간 */
+  .travelGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.travelBox{background:var(--pll);border:1px solid var(--line);border-radius:14px;padding:10px}.travelBox label{display:block!important;margin:0 0 6px!important;color:var(--tx)!important;font-size:12px!important}.travelBox input{width:100%!important;background:#fff!important;text-align:center}
+  /* 간편 운영시간 */
   .hoursCard{background:var(--pll);border:1px solid var(--line);border-radius:16px;padding:13px;margin-bottom:12px}
   .hoursTop{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}.hoursTop b{font-size:13px}.hoursTop button{border:0;background:none;color:var(--p3);font-size:11px;font-weight:700}
   .hoursQuick{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:10px}.hoursQuick button{height:36px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--tx);font-size:12px;font-weight:700}.hoursQuick button.on{background:var(--dk);border-color:var(--dk);color:#fff}
   .dayChips{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:11px}.dayChip{aspect-ratio:1;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--sub);font-size:11px;font-weight:700}.dayChip.on{background:var(--p2);border-color:var(--p2);color:#fff}.dayChip.sun{color:#c0504d}.dayChip.sun.on{color:#fff}
   .timeLine{display:grid;grid-template-columns:1fr auto 1fr;gap:7px;align-items:center}.timeLine input{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 8px;font:inherit;color:var(--tx);text-align:center}.timeLine i{font-style:normal;color:var(--sub);font-size:12px}
-  .hoursActions{display:flex;gap:7px;margin-top:10px}.hoursActions button{flex:1;height:38px;border:0;border-radius:11px;font-size:12px;font-weight:700}.hoursAdd{background:var(--p2);color:#fff}.hoursClosed{background:#fff;color:var(--dk);border:1px solid var(--line)!important}
+  .hoursActions{display:grid;grid-template-columns:1.15fr .85fr;gap:8px;margin-top:10px}.hoursActions button{height:40px;border-radius:11px;font-size:12px;font-weight:700}.hoursAdd{border:0;background:var(--p2);color:#fff}.hoursClosed{background:#fff;color:#c0504d;border:1px solid #e5c9c8!important}
   .hoursList{display:flex;flex-direction:column;gap:7px;margin-top:10px}.hoursItem{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 10px}.hoursItemText{flex:1;min-width:0;font-size:12px;line-height:1.35}.hoursItemText b{display:block;font-size:12px}.hoursItemText span{color:var(--sub);font-size:11px}.hoursDel{border:0;background:#ededeb;color:#777;width:27px;height:27px;border-radius:50%;font-size:15px}
-  .hoursEmpty{font-size:11px;color:var(--sub);text-align:center;padding:9px 0 2px}.hoursPreview{margin-top:10px;padding-top:9px;border-top:1px dashed #d9d9d4;font-size:11px;color:var(--sub);line-height:1.5}
-  .manualHours{display:none;margin-top:10px}.manualHours.show{display:block}.manualHours input{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 11px;font:inherit;font-size:13px}
+  .hoursEmpty{font-size:11px;color:var(--sub);text-align:center;padding:9px 0 2px}.hoursPreview{margin-top:10px;padding-top:9px;border-top:1px dashed #d9d9d4;font-size:11px;color:var(--sub);line-height:1.5}.manualHours{display:none;margin-top:10px}.manualHours.show{display:block}.manualHours input{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 11px;font:inherit;font-size:13px}
 
 </style>
 </head>
@@ -198,9 +206,9 @@
     <div class="hcard">
       <div class="hrow">
         <div class="htitle">수도권 나들이<b>어디 가볼까?</b></div>
-        <div class="hcount" id="hcount">0곳</div>
+        <div style="display:flex;align-items:center;gap:7px"><div class="hcount" id="hcount">0곳</div><button type="button" class="searchFold" id="searchFold" onclick="toggleTopSearch()" aria-label="검색창 접기">⌃</button></div>
       </div>
-      <form class="sbox" onsubmit="event.preventDefault();searchKeyword()">
+      <form class="sbox" id="topSearchBox" onsubmit="event.preventDefault();searchKeyword()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5cb86e" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input type="search" id="kw" placeholder="장소 검색해서 추가하기" enterkeyhint="search">
         <button type="submit">검색</button>
@@ -228,7 +236,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>지도</button>
     <button id="navList" onclick="openList()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>내 장소</button>
-    <button class="fab" onclick="focusSearch()">
+    <button class="fab" onclick="openAddMenu()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
     <button id="navRec" onclick="openList('rec')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>추천</button>
@@ -306,7 +314,7 @@ const PIN = "<svg class=\"pi\" viewBox=\"0 0 24 24\"><path d=\"M12 22s-7-6.3-7-1
 const STORAGE_KEY = 'sudo-map-places-v3';
 const KEY_STORE = 'sudo-map-kakao-key';
 const FIELDS = [['fee','입장료(1인당)'],['feature','특징'],['transport','이동수단'],['distance','거리'],['hours','운영시간'],['link','링크'],['parking','주차여부'],['note','비고']];
-const EMPTY = {fee:'',feature:'',transport:'',distance:'',hours:'',hoursSchedule:[],link:'',parking:'',note:''};
+const EMPTY = {fee:'',feature:'',transport:'',distance:'',carTime:'',transitTime:'',hours:'',hoursSchedule:[],link:'',parking:'',note:''};
 
 const DEFAULT_PLACES = [
   ['루덴시아 테마파크',0,37.3946,127.4440,'루덴시아'],
@@ -607,7 +615,7 @@ function openDetail(id){
     <div class="dcard">
       <div class="nm">${p.rec?STAR:''}${esc(p.name)}</div>
       <div class="ad">${PIN}${esc(p.address||'주소 정보 없음')}</div>
-      <div class="dstats">${stat('입장료',p.fee)}${stat('거리',p.distance)}${stat('주차',p.parking)}</div>
+      <div class="dstats">${stat('입장료',p.fee)}${stat('승용차',p.carTime||p.distance)}${stat('대중교통',p.transitTime)}</div>
     </div>
     <div class="flist">${rows}</div>
     <div class="acts">
@@ -638,7 +646,7 @@ function renderListBody(fl){
   $('lbody').innerHTML = arr.length ? arr.map(p=>`
     <div class="card" onclick="focusPlace('${p.id}')">
       <div class="ico ${p.rec?'rec':''}">${p.rec?STAR:PIN}</div>
-      <div class="info"><div class="t">${esc(p.name)}</div><div class="a">${esc([p.fee,p.distance,p.transport].filter(Boolean).join(' · ')||p.address||'정보 미입력')}</div></div>
+      <div class="info"><div class="t">${esc(p.name)}</div><div class="a">${esc([p.fee,p.carTime&&('승용차 '+p.carTime),p.transitTime&&('대중교통 '+p.transitTime)].filter(Boolean).join(' · ')||p.address||'정보 미입력')}</div></div>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c8c8c3" stroke-width="2.4" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
     </div>`).join('') : '<div class="empty">장소가 없어요</div>';
 }
@@ -675,7 +683,19 @@ function onMapClick(ll){
 }
 
 /* ---------- 검색 ---------- */
-function focusSearch(){ closeSheet(); $('kw').focus(); }
+function toggleTopSearch(force){
+  const card=document.querySelector('.hcard');
+  const collapse=typeof force==='boolean'?force:!card.classList.contains('searchCollapsed');
+  card.classList.toggle('searchCollapsed',collapse);
+  $('searchFold').setAttribute('aria-label',collapse?'검색창 펼치기':'검색창 접기');
+}
+function openAddMenu(){
+  openSheet('장소 추가',`<div class="addHero"><p>장소를 검색하거나 지도에서 위치를 직접 선택할 수 있어요.</p>
+    <button class="addChoice" onclick="closeSheet();toggleTopSearch(false);setTimeout(()=>$('kw').focus(),280)"><span class="addChoiceIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><span class="addChoiceText"><b>장소 검색</b><span>상호명이나 장소명으로 찾아서 추가</span></span><span class="addChoiceArrow">›</span></button>
+    <button class="addChoice" onclick="closeSheet();toast('지도에서 추가할 위치를 눌러 주세요')"><span class="addChoiceIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s-7-6.3-7-12a7 7 0 0114 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></span><span class="addChoiceText"><b>지도에서 선택</b><span>지도를 눌러 주변 장소 또는 위치 추가</span></span><span class="addChoiceArrow">›</span></button>
+  </div>`);
+}
+function focusSearch(){ closeSheet(); toggleTopSearch(false); setTimeout(()=>$('kw').focus(),280); }
 function searchKeyword(){
   const kw=$('kw').value.trim(); if(!kw) return;
   if(!ps){ toast('지도가 아직 연결되지 않았어요'); return; }
@@ -711,31 +731,24 @@ function openForm(id){
     <div class="faddr">${PIN} ${esc(p.address||'')}</div>
     <div class="fg"><label>이름 *</label><input type="text" id="f_name" value="${esc(p.name)}"></div>
     <div class="fg"><label>추천</label><div class="seg"><label><input type="checkbox" id="f_rec" ${ck(p.rec)}><span>★ 추천 장소</span></label></div></div>
-    <div class="fg2">
-      <div class="fg"><label>입장료(1인당)</label><input type="text" id="f_fee" value="${esc(p.fee)}"></div>
-      <div class="fg"><label>거리</label><input type="text" id="f_distance" value="${esc(p.distance)}"></div>
-    </div>
+    <div class="fg"><label>입장료(1인당)</label><input type="text" id="f_fee" value="${esc(p.fee)}"></div>
+    <div class="fg"><label>소요 시간</label><div class="travelGrid">
+      <div class="travelBox"><label>승용차</label><input type="text" id="f_carTime" value="${esc(p.carTime||p.distance||'')}" placeholder="예: 50분"></div>
+      <div class="travelBox"><label>대중교통</label><input type="text" id="f_transitTime" value="${esc(p.transitTime||'')}" placeholder="예: 1시간 20분"></div>
+    </div></div>
     <div class="fg"><label>특징</label><textarea id="f_feature">${esc(p.feature)}</textarea></div>
     <div class="fg"><label>이동수단</label><div class="seg">
       <label><input type="checkbox" class="f_tr" value="승용차" ${ck(tr.includes('승용차'))}><span>승용차</span></label>
       <label><input type="checkbox" class="f_tr" value="대중교통" ${ck(tr.includes('대중교통'))}><span>대중교통</span></label></div></div>
-    <div class="fg"><label>운영시간</label>
-      <div class="hoursCard">
-        <div class="hoursTop"><b>간편 설정</b><button type="button" onclick="toggleManualHours()">직접 입력</button></div>
-        <div class="hoursQuick">
-          <button type="button" id="hq_all" onclick="quickDays('all')">전체</button>
-          <button type="button" id="hq_weekday" class="on" onclick="quickDays('weekday')">평일</button>
-          <button type="button" id="hq_weekend" onclick="quickDays('weekend')">주말</button>
-        </div>
-        <div class="dayChips" id="dayChips"></div>
-        <div class="timeLine"><input type="time" id="hoursStart" value="10:00"><i>~</i><input type="time" id="hoursEnd" value="18:00"></div>
-        <div class="hoursActions"><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">시간 추가</button><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">선택일 휴무</button></div>
-        <div class="hoursList" id="hoursList"></div>
-        <div class="hoursPreview" id="hoursPreview"></div>
-        <div class="manualHours" id="manualHours"><input type="text" id="f_hours_manual" value="${esc(p.hours||'')}" placeholder="예: 매일 10:00~18:00 / 월요일 휴무"></div>
-      </div>
-      <input type="hidden" id="f_hours" value="${esc(p.hours||'')}">
-    </div>
+    <div class="fg"><label>운영시간</label><div class="hoursCard">
+      <div class="hoursTop"><b>요일과 시간 선택</b><button type="button" onclick="toggleManualHours()">직접 입력</button></div>
+      <div class="hoursQuick"><button type="button" id="hq_all" onclick="quickDays('all')">전체</button><button type="button" id="hq_weekday" class="on" onclick="quickDays('weekday')">평일</button><button type="button" id="hq_weekend" onclick="quickDays('weekend')">주말</button></div>
+      <div class="dayChips" id="dayChips"></div>
+      <div class="timeLine"><input type="time" id="hoursStart" value="10:00"><i>~</i><input type="time" id="hoursEnd" value="18:00"></div>
+      <div class="hoursActions"><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">선택 요일에 시간 적용</button><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">선택 요일 휴무</button></div>
+      <div class="hoursList" id="hoursList"></div><div class="hoursPreview" id="hoursPreview"></div>
+      <div class="manualHours" id="manualHours"><input type="text" id="f_hours_manual" value="${esc(p.hours||'')}" placeholder="예: 매일 10:00~18:00 / 월요일 휴무"></div>
+    </div><input type="hidden" id="f_hours" value="${esc(p.hours||'')}"></div>
     <div class="fg"><label>링크</label><input type="text" id="f_link" value="${esc(p.link)}" inputmode="url"></div>
     <div class="fg"><label>주차여부</label><div class="seg">
       <label><input type="radio" name="f_parking" value="O" ${ck(p.parking==='O')}><span>O 가능</span></label>
@@ -744,57 +757,48 @@ function openForm(id){
     <div class="fg"><label>비고</label><textarea id="f_note">${esc(p.note)}</textarea></div>
     <div class="acts"><button class="pbtn ghost" onclick="${id?`openDetail('${id}')`:'closeSheet()'}">취소</button><button class="pbtn main" onclick="saveForm()">저장</button></div>`);
   hoursDraft=Array.isArray(p.hoursSchedule)?p.hoursSchedule.map(x=>({...x,days:[...(x.days||[])]})):[];
-  selectedDays=[1,2,3,4,5];
-  renderDayChips(); renderHoursList();
+  selectedDays=[1,2,3,4,5]; renderDayChips(); renderHoursList();
   if(!hoursDraft.length && p.hours) toggleManualHours(true);
 }
 const DAY_NAMES=['일','월','화','수','목','금','토'];
+function sameDays(a,b){const x=[...a].sort(),y=[...b].sort();return x.length===y.length&&x.every((v,i)=>v===y[i]);}
+function quickSet(type){return type==='all'?[0,1,2,3,4,5,6]:type==='weekend'?[0,6]:[1,2,3,4,5];}
 function renderDayChips(){
-  const el=$('dayChips'); if(!el)return;
+  const el=$('dayChips');if(!el)return;
   el.innerHTML=DAY_NAMES.map((d,i)=>`<button type="button" class="dayChip ${i===0?'sun ':''}${selectedDays.includes(i)?'on':''}" onclick="toggleDay(${i})">${d}</button>`).join('');
-  ['all','weekday','weekend'].forEach(k=>{const b=$('hq_'+k);if(b)b.classList.toggle('on',(k==='all'&&selectedDays.length===7)||(k==='weekday'&&sameDays(selectedDays,[1,2,3,4,5]))||(k==='weekend'&&sameDays(selectedDays,[0,6])));});
+  ['all','weekday','weekend'].forEach(k=>{const b=$('hq_'+k);if(b)b.classList.toggle('on',sameDays(selectedDays,quickSet(k)));});
 }
-function sameDays(a,b){return a.length===b.length&&[...a].sort().every((x,i)=>x===[...b].sort()[i]);}
-function quickDays(type){selectedDays=type==='all'?[0,1,2,3,4,5,6]:type==='weekend'?[0,6]:[1,2,3,4,5];renderDayChips();}
+function quickDays(type){const target=quickSet(type);selectedDays=sameDays(selectedDays,target)?[]:target;renderDayChips();}
 function toggleDay(i){selectedDays=selectedDays.includes(i)?selectedDays.filter(x=>x!==i):[...selectedDays,i].sort();renderDayChips();}
-function dayLabel(days){
-  const a=[...days].sort();
-  if(sameDays(a,[0,1,2,3,4,5,6]))return '매일';
-  if(sameDays(a,[1,2,3,4,5]))return '평일';
-  if(sameDays(a,[0,6]))return '주말';
-  return a.map(i=>DAY_NAMES[i]).join('·');
-}
+function dayLabel(days){const a=[...days].sort();if(sameDays(a,quickSet('all')))return '매일';if(sameDays(a,quickSet('weekday')))return '평일';if(sameDays(a,quickSet('weekend')))return '주말';return a.map(i=>DAY_NAMES[i]).join('·');}
+function timeOverlap(aStart,aEnd,bStart,bEnd){return aStart<bEnd&&bStart<aEnd;}
 function addHoursBlock(closed){
   if(!selectedDays.length){toast('요일을 하나 이상 선택해 주세요');return;}
   const start=$('hoursStart').value,end=$('hoursEnd').value;
-  if(!closed&&(!start||!end)){toast('시작과 종료 시간을 선택해 주세요');return;}
+  if(!closed&&(!start||!end||start>=end)){toast('종료 시간을 시작 시간보다 늦게 선택해 주세요');return;}
+  const conflicts=[];
+  hoursDraft.forEach((x,idx)=>{
+    const shared=x.days.filter(d=>selectedDays.includes(d));
+    if(!shared.length)return;
+    if(closed||x.closed||timeOverlap(start,end,x.start,x.end))conflicts.push({idx,days:shared});
+  });
+  if(conflicts.length){toast('선택한 요일에 이미 시간 또는 휴무가 설정돼 있어요');return;}
   hoursDraft.push({days:[...selectedDays],closed:!!closed,start:closed?'':start,end:closed?'':end});
   $('manualHours').classList.remove('show');renderHoursList();
 }
 function removeHoursBlock(i){hoursDraft.splice(i,1);renderHoursList();}
 function formatHours(){return hoursDraft.map(x=>`${dayLabel(x.days)} ${x.closed?'휴무':x.start+'~'+x.end}`).join(' / ');}
 function renderHoursList(){
-  const list=$('hoursList'),preview=$('hoursPreview'); if(!list||!preview)return;
-  list.innerHTML=hoursDraft.length?hoursDraft.map((x,i)=>`<div class="hoursItem"><div class="hoursItemText"><b>${dayLabel(x.days)}</b><span>${x.closed?'휴무':x.start+' ~ '+x.end}</span></div><button type="button" class="hoursDel" onclick="removeHoursBlock(${i})">×</button></div>`).join(''):'<div class="hoursEmpty">전체·평일·주말 또는 요일을 선택하고 시간을 추가하세요.</div>';
+  const list=$('hoursList'),preview=$('hoursPreview');if(!list||!preview)return;
+  list.innerHTML=hoursDraft.length?hoursDraft.map((x,i)=>`<div class="hoursItem"><div class="hoursItemText"><b>${dayLabel(x.days)}</b><span>${x.closed?'휴무':x.start+' ~ '+x.end}</span></div><button type="button" class="hoursDel" onclick="removeHoursBlock(${i})">×</button></div>`).join(''):'<div class="hoursEmpty">요일을 선택한 뒤 시간 적용 또는 휴무를 눌러 주세요.</div>';
   const text=formatHours();preview.textContent=text?'표시 결과 · '+text:'운영시간 미설정';$('f_hours').value=text;
 }
-function toggleManualHours(force){
-  const el=$('manualHours');if(!el)return;
-  const show=force===true||!el.classList.contains('show');el.classList.toggle('show',show);
-  if(show){hoursDraft=[];renderHoursList();setTimeout(()=>$('f_hours_manual').focus(),50);}
-}
-function v(k){
-  if(k==='hours'){
-    const manual=$('manualHours');
-    if(manual&&manual.classList.contains('show'))return $('f_hours_manual').value.trim();
-    return formatHours();
-  }
-  return $('f_'+k).value.trim();
-}
+function toggleManualHours(force){const el=$('manualHours');if(!el)return;const show=force===true||!el.classList.contains('show');el.classList.toggle('show',show);if(show){hoursDraft=[];renderHoursList();setTimeout(()=>$('f_hours_manual').focus(),50);}}
+function v(k){if(k==='hours'){const m=$('manualHours');return m&&m.classList.contains('show')?$('f_hours_manual').value.trim():formatHours();}return $('f_'+k).value.trim();}
 function saveForm(){
   const name=v('name'); if(!name){toast('이름을 입력해 주세요');return;}
   const manualHours=$('manualHours')?.classList.contains('show');
-  const data={name,rec:$('f_rec').checked,fee:v('fee'),feature:v('feature'),distance:v('distance'),hours:v('hours'),hoursSchedule:manualHours?[]:hoursDraft.map(x=>({...x,days:[...x.days]})),link:v('link'),note:v('note'),
+  const data={name,rec:$('f_rec').checked,fee:v('fee'),feature:v('feature'),distance:'',carTime:v('carTime'),transitTime:v('transitTime'),hours:v('hours'),hoursSchedule:manualHours?[]:hoursDraft.map(x=>({...x,days:[...x.days]})),link:v('link'),note:v('note'),
     transport:[...document.querySelectorAll('.f_tr:checked')].map(c=>c.value).join(', '),
     parking:(document.querySelector('input[name=f_parking]:checked')||{}).value||''};
   let id=editingId;
