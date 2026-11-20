@@ -219,6 +219,20 @@
   .top:not(.collapsed) .chips{margin-top:8px!important;transform:none!important}
   .top .chips{transition:margin-top .22s ease,transform .22s ease!important}
 
+
+  /* ---------- 운영시간 선택 UI: 네이티브 드롭다운 제거 ---------- */
+  .customHoursLine{display:grid!important;grid-template-columns:1fr auto 1fr!important;gap:8px!important;align-items:center!important}
+  .customHoursLine>i{font-style:normal;color:var(--sub);font-size:12px}
+  .hoursTimeBtn{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;width:100%;height:58px;padding:8px 34px 8px 12px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--tx);text-align:left}
+  .hoursTimeBtn small{font-size:10px;color:var(--sub);line-height:1;margin-bottom:5px}.hoursTimeBtn strong{font-size:13px;line-height:1;font-weight:700;white-space:nowrap}.hoursTimeBtn svg{position:absolute;right:10px;top:50%;width:17px;height:17px;transform:translateY(-50%);fill:none;stroke:var(--p3);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .hoursTimeBtn:active{background:var(--pl);border-color:#cfe7d4}
+  .hoursTimeModal{position:absolute;inset:0;z-index:76;background:rgba(51,51,50,.20);display:none;align-items:flex-end}.hoursTimeModal.show{display:flex}
+  .hoursTimePanel{width:100%;background:#fbfcf9;border-radius:20px 20px 0 0;padding:10px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(51,51,50,.10)}
+  .hoursWheelCols{display:grid;grid-template-columns:1fr 1fr;gap:14px;background:#fbfcf9}
+  .hoursTimePreview{margin:10px 0 4px;padding:11px 12px;border-radius:12px;background:var(--pl);color:var(--p3);font-size:14px;font-weight:800;text-align:center}
+  .hoursTimeModal .wheelNumber.selected{background:var(--p2)!important;color:#fff!important}
+  .hoursTimeModal .wheelNumber:not(.selected){background:transparent!important;color:#57605a!important}
+
 </style>
 </head>
 <body>
@@ -282,6 +296,19 @@
         <div class="wheelCol"><span>분</span><div class="wheelViewport" id="wheelMin"></div></div>
       </div>
       <div class="wheelActions"><button type="button" class="pbtn ghost" onclick="resetWheelTime()">초기화</button><button type="button" class="pbtn main" onclick="applyWheelTime()">확인</button></div>
+    </div>
+  </div>
+
+
+  <div class="hoursTimeModal" id="hoursTimeModal" onclick="if(event.target===this)closeHoursTimePicker()">
+    <div class="hoursTimePanel">
+      <div class="timePanelHead"><b id="hoursTimeTitle">운영시간 선택</b><button type="button" onclick="closeHoursTimePicker()">×</button></div>
+      <div class="hoursWheelCols">
+        <div class="wheelCol"><span>시간</span><div class="wheelViewport" id="hoursWheelHour"></div></div>
+        <div class="wheelCol"><span>분</span><div class="wheelViewport" id="hoursWheelMin"></div></div>
+      </div>
+      <div class="hoursTimePreview" id="hoursTimePreview">오전 10:00</div>
+      <div class="wheelActions"><button type="button" class="pbtn ghost" onclick="closeHoursTimePicker()">취소</button><button type="button" class="pbtn main" onclick="applyHoursTime()">확인</button></div>
     </div>
   </div>
 
@@ -806,7 +833,12 @@ function openForm(id){
       <div class="hoursTop"><b>요일과 시간 선택</b><button type="button" onclick="toggleManualHours()">직접 입력</button></div>
       <div class="hoursQuick"><button type="button" id="hq_all" onclick="quickDays('all')">전체</button><button type="button" id="hq_weekday" class="on" onclick="quickDays('weekday')">평일</button><button type="button" id="hq_weekend" onclick="quickDays('weekend')">주말</button></div>
       <div class="dayChips" id="dayChips"></div>
-      <div class="timeLine"><input type="time" id="hoursStart" value="10:00"><i>~</i><input type="time" id="hoursEnd" value="18:00"></div>
+      <div class="timeLine customHoursLine">
+        <button type="button" class="hoursTimeBtn" id="hoursStartBtn" onclick="openHoursTimePicker('hoursStart','시작 시간')"><small>시작</small><strong id="hoursStartDisplay">오전 10:00</strong><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+        <i>~</i>
+        <button type="button" class="hoursTimeBtn" id="hoursEndBtn" onclick="openHoursTimePicker('hoursEnd','종료 시간')"><small>종료</small><strong id="hoursEndDisplay">오후 06:00</strong><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg></button>
+        <input type="hidden" id="hoursStart" value="10:00"><input type="hidden" id="hoursEnd" value="18:00">
+      </div>
       <div class="hoursActions"><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">선택 요일에 시간 적용</button><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">선택 요일 휴무</button></div>
       <div class="hoursList" id="hoursList"></div><div class="hoursPreview" id="hoursPreview"></div>
       <div class="manualHours" id="manualHours"><input type="text" id="f_hours_manual" value="${esc(p.hours||'')}" placeholder="예: 매일 10:00~18:00 / 월요일 휴무"></div>
@@ -819,7 +851,7 @@ function openForm(id){
     <div class="fg"><label>비고</label><textarea id="f_note">${esc(p.note)}</textarea></div>
     <div class="acts"><button class="pbtn ghost" onclick="${id?`openDetail('${id}')`:'closeSheet()'}">취소</button><button class="pbtn main" onclick="saveForm()">저장</button></div>`);
   hoursDraft=Array.isArray(p.hoursSchedule)?p.hoursSchedule.map(x=>({...x,days:[...(x.days||[])]})):[];
-  selectedDays=[1,2,3,4,5]; renderDayChips(); renderHoursList();
+  selectedDays=[1,2,3,4,5]; renderDayChips(); renderHoursList(); syncHoursTimeDisplays();
   if(!hoursDraft.length && p.hours) toggleManualHours(true);
 }
 const DAY_NAMES=['일','월','화','수','목','금','토'];
@@ -834,6 +866,47 @@ function quickDays(type){const target=quickSet(type);selectedDays=sameDays(selec
 function toggleDay(i){selectedDays=selectedDays.includes(i)?selectedDays.filter(x=>x!==i):[...selectedDays,i].sort();renderDayChips();}
 function dayLabel(days){const a=[...days].sort();if(sameDays(a,quickSet('all')))return '매일';if(sameDays(a,quickSet('weekday')))return '평일';if(sameDays(a,quickSet('weekend')))return '주말';return a.map(i=>DAY_NAMES[i]).join('·');}
 function timeOverlap(aStart,aEnd,bStart,bEnd){return aStart<bEnd&&bStart<aEnd;}
+let activeHoursTimeTarget='';
+function formatKoreanTime(value){
+  const [hText,mText]=String(value||'00:00').split(':');
+  const h=Number(hText)||0,m=Number(mText)||0;
+  const period=h<12?'오전':'오후';
+  const displayHour=h%12||12;
+  return `${period} ${String(displayHour).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+function syncHoursTimeDisplays(){
+  const start=$('hoursStart'),end=$('hoursEnd');
+  if(start&&$('hoursStartDisplay'))$('hoursStartDisplay').textContent=formatKoreanTime(start.value);
+  if(end&&$('hoursEndDisplay'))$('hoursEndDisplay').textContent=formatKoreanTime(end.value);
+}
+function openHoursTimePicker(target,title){
+  activeHoursTimeTarget=target;
+  const current=$(target).value||'10:00';
+  const [h,m]=current.split(':').map(Number);
+  $('hoursTimeTitle').textContent=title;
+  renderHoursWheel('hoursWheelHour',24,h||0);
+  renderHoursWheel('hoursWheelMin',60,m||0);
+  $('hoursTimePreview').textContent=formatKoreanTime(current);
+  $('hoursTimeModal').classList.add('show');
+  requestAnimationFrame(()=>{centerHoursWheel('hoursWheelHour',h||0,false);centerHoursWheel('hoursWheelMin',m||0,false);});
+}
+function closeHoursTimePicker(){$('hoursTimeModal').classList.remove('show');activeHoursTimeTarget='';}
+function renderHoursWheel(id,count,selected){
+  const el=$(id);el.dataset.value=selected;
+  el.innerHTML='<div class="wheelPad"></div>'+Array.from({length:count},(_,i)=>`<button type="button" class="wheelNumber ${i===selected?'selected':''}" data-value="${i}" onclick="selectHoursWheel('${id}',${i})">${String(i).padStart(2,'0')}</button>`).join('')+'<div class="wheelPad"></div>';
+  let timer;el.onscroll=()=>{clearTimeout(timer);timer=setTimeout(()=>snapHoursWheel(id),80);};
+}
+function centerHoursWheel(id,value,smooth=true){const el=$(id);el.scrollTo({top:value*44,behavior:smooth?'smooth':'auto'});selectHoursWheelVisual(id,value);}
+function selectHoursWheel(id,value){centerHoursWheel(id,value,true);updateHoursTimePreview();}
+function selectHoursWheelVisual(id,value){const el=$(id);el.dataset.value=value;el.querySelectorAll('.wheelNumber').forEach(b=>b.classList.toggle('selected',+b.dataset.value===value));}
+function snapHoursWheel(id){const el=$(id),max=el.querySelectorAll('.wheelNumber').length-1,value=Math.max(0,Math.min(max,Math.round(el.scrollTop/44)));centerHoursWheel(id,value,true);updateHoursTimePreview();}
+function updateHoursTimePreview(){const h=+$('hoursWheelHour').dataset.value||0,m=+$('hoursWheelMin').dataset.value||0;$('hoursTimePreview').textContent=formatKoreanTime(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`);}
+function applyHoursTime(){
+  if(!activeHoursTimeTarget)return;
+  const h=+$('hoursWheelHour').dataset.value||0,m=+$('hoursWheelMin').dataset.value||0;
+  $(activeHoursTimeTarget).value=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  syncHoursTimeDisplays();closeHoursTimePicker();
+}
 function addHoursBlock(closed){
   if(!selectedDays.length){toast('요일을 하나 이상 선택해 주세요');return;}
   const start=$('hoursStart').value,end=$('hoursEnd').value;
