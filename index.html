@@ -202,10 +202,30 @@
   .top{padding-left:10px;padding-right:10px}.hcard{transition:width .22s,height .22s,padding .22s,border-radius .22s;margin-left:0}
   .hcard.searchCollapsed{width:42px;height:42px;padding:0;margin-left:auto;border-radius:50%;overflow:visible}.hcard.searchCollapsed .htitle,.hcard.searchCollapsed .hcount,.hcard.searchCollapsed .sbox{display:none}.hcard.searchCollapsed .hrow{height:42px;margin:0;justify-content:center}.hcard.searchCollapsed .hrow>div{display:flex!important}.hcard.searchCollapsed .searchFold{background:transparent;width:42px;height:42px}
   .chips{gap:7px;margin-top:8px}.chip{box-shadow:0 2px 6px rgba(51,51,50,.12);padding:7px 15px}
-  .sheet{border-radius:20px 20px 0 0;max-height:90%}.grab{width:48px;height:5px;margin-top:9px;cursor:grab}.shead{padding:7px 16px 11px}.sbody{padding:0 12px 16px}.xbtn{width:34px;height:34px}
+  .sheet{border-radius:20px 20px 0 0;max-height:90%}.grab{width:48px;height:5px;margin-top:9px;cursor:grab}.shead{padding:7px 16px 11px}.sheetDragTitle{flex:1;min-height:34px;display:flex;align-items:center;touch-action:none}.xbtn{position:relative;z-index:3;touch-action:manipulation;cursor:pointer}.sbody{padding:0 12px 16px}.xbtn{width:34px;height:34px}
   .fg{margin-bottom:14px}.fg>label{margin:0 0 7px 1px}.travelGrid{gap:8px}.travelBox{padding:11px;background:#f4f5f0;border-radius:13px}.travelLabel{font-size:12px;font-weight:700;margin-bottom:8px}.travelSelects{display:grid;grid-template-columns:1fr 1fr;gap:6px}.travelSelects select{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--tx);font:inherit;font-size:13px;padding:0 4px}
   .hoursCard{padding:12px}.hoursQuick button{height:34px}.dayChips{margin-bottom:10px}.timeLine input{height:40px}.hoursAdd{width:100%;height:40px;border:0;border-radius:11px;background:var(--p2);color:#fff;font-size:12px;font-weight:700;margin-top:10px}.closedSection{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}.closedSection span{font-size:11.5px;color:var(--sub)}.hoursClosed{height:34px;min-width:66px;background:#fff;color:#c0504d;border:1px solid #e5c9c8;border-radius:10px;font-size:12px;font-weight:700}.hoursPreview{margin-top:10px}.hoursItem{padding:8px 9px}
   .pbtn{height:44px;border-radius:12px}.dcard{border-radius:16px}.flist,.card{border-radius:14px}
+
+
+  /* 접기 상태: 헤더 글자와 배경은 완전히 사라지고 화살표만 유지 */
+  .top{transition:padding .22s ease}.hcard.searchCollapsed{background:transparent!important;box-shadow:none!important;overflow:visible!important}
+  .hcard.searchCollapsed .hrow{position:static!important}.hcard.searchCollapsed .hrow>div{position:static!important}
+  .searchFold svg{width:22px;height:22px;display:block;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .hcard.searchCollapsed .searchFold{background:var(--dk)!important;box-shadow:0 3px 9px rgba(0,0,0,.22);transform:rotate(180deg)}
+  .top .chips{transition:margin-top .22s ease,transform .22s ease}.top.collapsed .chips{margin-top:5px;transform:translateY(0)}
+  /* 장소 선택 시 가장 가까운 후보를 첫 카드로 명확히 강조 */
+  .sheet .card:first-child{border-color:#bcdcc3;background:#fbfffc}.sheet .card:first-child .ico{background:#e2f3e6}
+
+
+  /* 소요시간: 앱 톤과 맞춘 카드형 스테퍼 */
+  .travelGrid{display:grid;grid-template-columns:1fr;gap:9px}
+  .travelBox{background:#f7f8f4!important;border:1px solid var(--line)!important;border-radius:15px!important;padding:12px!important}
+  .travelLabel{display:flex;align-items:center;gap:8px;margin-bottom:10px!important}.travelLabel b{font-size:13px}.travelIcon{width:25px;height:25px;border-radius:9px;background:var(--pl);color:var(--p3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800}
+  .travelControls{display:grid;grid-template-columns:1fr 1fr;gap:8px}.timeStepper{display:grid;grid-template-columns:34px 1fr 34px;align-items:center;height:50px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .timeStepper button{height:100%;border:0;background:#fff;color:var(--p3);font-size:20px;font-weight:500}.timeStepper button:active{background:var(--pl)}.timeStepper div{text-align:center;line-height:1}.timeStepper strong{font-size:17px;color:var(--tx)}.timeStepper small{display:block;font-size:9.5px;color:var(--sub);margin-top:4px}
+  .travelQuick{display:flex;gap:6px;margin-top:8px}.travelQuick button{flex:1;border:0;background:var(--pl);color:var(--p3);height:30px;border-radius:9px;font-size:10.5px;font-weight:700}.travelQuick button:active{background:var(--p2);color:#fff}
+  @media(min-width:430px){.travelGrid{grid-template-columns:1fr 1fr}.travelQuick{display:none}}
 
 </style>
 </head>
@@ -217,7 +237,7 @@
     <div class="hcard">
       <div class="hrow">
         <div class="htitle">수도권 나들이<b>어디 가볼까?</b></div>
-        <div style="display:flex;align-items:center;gap:7px"><div class="hcount" id="hcount">0곳</div><button type="button" class="searchFold" id="searchFold" onclick="toggleTopSearch()" aria-label="검색창 접기">⌃</button></div>
+        <div style="display:flex;align-items:center;gap:7px"><div class="hcount" id="hcount">0곳</div><button type="button" class="searchFold" id="searchFold" onclick="toggleTopSearch()" aria-label="검색창 접기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button></div>
       </div>
       <form class="sbox" id="topSearchBox" onsubmit="event.preventDefault();searchKeyword()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5cb86e" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -256,7 +276,7 @@
   <div class="dim" id="dim" onclick="closeSheet()"></div>
   <div class="sheet" id="sheet">
     <div class="grab"></div>
-    <div class="shead"><h3 id="stitle"></h3><button class="xbtn" onclick="closeSheet()">×</button></div>
+    <div class="shead"><h3 id="stitle" class="sheetDragTitle"></h3><button type="button" class="xbtn" id="sheetCloseBtn" aria-label="닫기">×</button></div>
     <div class="sbody" id="sbody"></div>
   </div>
 
@@ -666,35 +686,33 @@ function onMapClick(ll){
   setTmp(ll);
   const lat=ll.getLat(),lng=ll.getLng();
   pending={name:'',lat,lng,address:''};
-  toast('선택한 장소를 확인하고 있어요');
+  openSheet('장소 선택','<div class="empty">선택한 위치의 장소를 찾는 중…</div>');
 
-  // 지도 라벨을 직접 읽을 수는 없으므로, 클릭 좌표에서 가장 가까운 POI를 우선 선택합니다.
   const found={}; let addr='',building='',left=CATS.length+1,done=false;
-  const choose=()=>{
-    if(done)return;done=true;
+  const showChoices=()=>{
+    if(done)return; done=true; resCache=[];
     const list=Object.values(found).sort((a,b)=>a.distance-b.distance);
     const nearest=list[0];
-    // 라벨을 정확히 누른 경우에만 바로 선택: 35m 이내. 그 외에는 후보 목록을 보여줍니다.
-    if(nearest && nearest.distance<=35){
-      pending={id:nearest.id,name:nearest.place_name,lat:+nearest.y,lng:+nearest.x,address:nearest.road_address_name||nearest.address_name||addr};
-      setTmp(new kakao.maps.LatLng(nearest.y,nearest.x));
-      openForm(null);
-      toast(nearest.place_name+' 선택');
-      return;
+    let html='';
+    // 첫 번째 카드는 클릭 지점에 가장 가까운 실제 카카오 장소입니다.
+    if(nearest) html+=resItem({...nearest,category:nearest.category||'가장 가까운 장소'});
+    // 주소 역지오코딩에서 건물명이 확인됐고 첫 후보와 이름이 다르면 두 번째 후보로 표시합니다.
+    if(building && (!nearest||building!==nearest.place_name)){
+      html+=resItem({place_name:building,address_name:addr,category:'건물',y:lat,x:lng,distance:0});
     }
-    if(building){
-      pending={name:building,lat,lng,address:addr};
-      openForm(null);toast(building+' 선택');return;
-    }
-    resCache=[];
-    let html=list.slice(0,12).map(resItem).join('');
+    // 가장 가까운 장소를 제외한 주변 후보는 최대 5개만 노출해 복잡도를 줄입니다.
+    html+=list.slice(nearest?1:0,nearest?6:5).map(resItem).join('');
     html+=resItem({place_name:'',address_name:addr||'선택한 위치',y:lat,x:lng,custom:true});
-    openSheet('장소 선택',html||'<div class="empty">선택할 장소를 찾지 못했어요</div>');
+    $('sbody').innerHTML=html||'<div class="empty">선택할 장소를 찾지 못했어요</div>';
   };
-  const finish=()=>{if(--left<=0)choose();};
-  setTimeout(choose,1800);
+  const finish=()=>{if(--left<=0)showChoices();};
+  setTimeout(showChoices,1800);
   geocoder.coord2Address(lng,lat,(r,st)=>{
-    if(st===kakao.maps.services.Status.OK&&r[0]){const ra=r[0].road_address;addr=ra?ra.address_name:r[0].address.address_name;if(ra&&ra.building_name)building=ra.building_name;}
+    if(st===kakao.maps.services.Status.OK&&r[0]){
+      const ra=r[0].road_address;
+      addr=ra?ra.address_name:r[0].address.address_name;
+      if(ra&&ra.building_name)building=ra.building_name;
+    }
     finish();
   });
   CATS.forEach(code=>ps.categorySearch(code,(data,st)=>{
@@ -708,6 +726,7 @@ function toggleTopSearch(force){
   const card=document.querySelector('.hcard');
   const collapse=typeof force==='boolean'?force:!card.classList.contains('searchCollapsed');
   card.classList.toggle('searchCollapsed',collapse);
+  document.querySelector('.top').classList.toggle('collapsed',collapse);
   $('searchFold').setAttribute('aria-label',collapse?'검색 펼치기':'검색 접기');
   localStorage.setItem('sudo-search-collapsed',collapse?'1':'0');
   setTimeout(()=>{if(map)map.relayout();},220);
@@ -754,11 +773,22 @@ function parseTravelTime(text){
 }
 function travelPicker(key,label,value){
   const t=parseTravelTime(value);
-  const hours=Array.from({length:25},(_,i)=>`<option value="${i}" ${i===t.h?'selected':''}>${i}시간</option>`).join('');
-  const mins=Array.from({length:12},(_,i)=>{const m=i*5;return `<option value="${m}" ${m===t.m?'selected':''}>${m}분</option>`}).join('');
-  return `<div class="travelBox"><div class="travelLabel">${label}</div><div class="travelSelects"><select id="f_${key}Hour">${hours}</select><select id="f_${key}Min">${mins}</select></div></div>`;
+  return `<div class="travelBox">
+    <div class="travelLabel"><span class="travelIcon">${key==='car'?'C':'T'}</span><b>${label}</b></div>
+    <div class="travelControls">
+      <div class="timeStepper"><button type="button" onclick="stepTravel('${key}','h',-1)">−</button><div><strong id="f_${key}Hour">${t.h}</strong><small>시간</small></div><button type="button" onclick="stepTravel('${key}','h',1)">＋</button></div>
+      <div class="timeStepper"><button type="button" onclick="stepTravel('${key}','m',-5)">−</button><div><strong id="f_${key}Min">${t.m}</strong><small>분</small></div><button type="button" onclick="stepTravel('${key}','m',5)">＋</button></div>
+    </div>
+    <div class="travelQuick">
+      <button type="button" onclick="setTravel('${key}',0,30)">30분</button><button type="button" onclick="setTravel('${key}',1,0)">1시간</button><button type="button" onclick="setTravel('${key}',1,30)">1시간 30분</button>
+    </div>
+  </div>`;
 }
-function getTravelTime(key){const h=+$('f_'+key+'Hour').value,m=+$('f_'+key+'Min').value;if(!h&&!m)return '';return `${h?h+'시간 ':''}${m?m+'분':''}`.trim();}
+function travelNum(key,part){return +$('f_'+key+(part==='h'?'Hour':'Min')).textContent||0;}
+function updateTravel(key,h,m){h=Math.max(0,Math.min(24,h));m=Math.max(0,Math.min(55,Math.round(m/5)*5));$('f_'+key+'Hour').textContent=h;$('f_'+key+'Min').textContent=m;}
+function stepTravel(key,part,delta){let h=travelNum(key,'h'),m=travelNum(key,'m');if(part==='h')h+=delta;else m+=delta;if(m>=60){h=Math.min(24,h+1);m=0;}if(m<0){if(h>0){h--;m=55}else m=0;}updateTravel(key,h,m);}
+function setTravel(key,h,m){updateTravel(key,h,m);}
+function getTravelTime(key){const h=travelNum(key,'h'),m=travelNum(key,'m');if(!h&&!m)return '';return `${h?h+'시간 ':''}${m?m+'분':''}`.trim();}
 function openForm(id){
   editingId=id;
   const p=id?places.find(x=>x.id===id):{...EMPTY,name:pending.name,address:pending.address};
@@ -855,12 +885,30 @@ function removePlace(id){
 /* ---------- 바텀시트 스와이프 ---------- */
 let sheetDrag={active:false,startY:0,lastY:0};
 function setupSheetSwipe(){
-  const sheet=$('sheet'),zones=[sheet.querySelector('.grab'),sheet.querySelector('.shead')];
+  const sheet=$('sheet');
+  const closeBtn=$('sheetCloseBtn');
+  // X는 드래그 영역과 완전히 분리해서 항상 한 번의 탭으로 닫힙니다.
+  closeBtn.addEventListener('pointerdown',e=>e.stopPropagation());
+  closeBtn.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();closeSheet();});
+  const zones=[sheet.querySelector('.grab'),sheet.querySelector('.sheetDragTitle')];
   zones.forEach(zone=>{
     zone.style.touchAction='none';
-    zone.addEventListener('pointerdown',e=>{sheetDrag={active:true,startY:e.clientY,lastY:e.clientY};sheet.style.transition='none';zone.setPointerCapture?.(e.pointerId);});
-    zone.addEventListener('pointermove',e=>{if(!sheetDrag.active)return;sheetDrag.lastY=e.clientY;sheet.style.transform=`translateY(${Math.max(0,e.clientY-sheetDrag.startY)}px)`;});
-    const end=()=>{if(!sheetDrag.active)return;const dy=sheetDrag.lastY-sheetDrag.startY;sheetDrag.active=false;sheet.style.transition='';sheet.style.transform='';if(dy>70)closeSheet();};
+    zone.addEventListener('pointerdown',e=>{
+      sheetDrag={active:true,startY:e.clientY,lastY:e.clientY};
+      sheet.style.transition='none';
+      zone.setPointerCapture?.(e.pointerId);
+    });
+    zone.addEventListener('pointermove',e=>{
+      if(!sheetDrag.active)return;
+      sheetDrag.lastY=e.clientY;
+      sheet.style.transform=`translateY(${Math.max(0,e.clientY-sheetDrag.startY)}px)`;
+    });
+    const end=()=>{
+      if(!sheetDrag.active)return;
+      const dy=sheetDrag.lastY-sheetDrag.startY;
+      sheetDrag.active=false;sheet.style.transition='';sheet.style.transform='';
+      if(dy>70)closeSheet();
+    };
     zone.addEventListener('pointerup',end);zone.addEventListener('pointercancel',end);
   });
 }
