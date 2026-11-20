@@ -77,10 +77,11 @@
   .dcard .nm svg.st{fill:#fff3b0}
   .dcard .nm{font-size:18px;font-weight:800;letter-spacing:-.4px;display:flex;align-items:center;gap:6px}
   .dcard .ad{font-size:12px;opacity:.85;margin-top:4px;display:flex;gap:5px;align-items:flex-start}
-  .dstats{display:flex;gap:8px;margin-top:14px;position:relative;z-index:1}
-  .dstat{flex:1;min-width:0;background:#edf7ee;border:1px solid rgba(255,255,255,.55);border-radius:12px;padding:10px 6px;text-align:center;color:#234a2d}
-  .dstat small{display:block;font-size:10.5px;font-weight:600;color:#496650}
-  .dstat b{display:block;font-size:13px;margin-top:4px;color:#1f4228;line-height:1.4;overflow-wrap:anywhere}
+  .dstats{display:flex;gap:0;margin-top:14px;position:relative;z-index:1}
+  .dstat{flex:1;min-width:0;position:relative;padding:10px 12px;text-align:center;color:#fff}
+  .dstat+.dstat:before{content:"";position:absolute;left:0;top:12px;bottom:12px;width:1px;background:rgba(255,255,255,.5)}
+  .dstat small{display:block;font-size:11px;font-weight:600;color:#fff}
+  .dstat b{display:block;font-size:15px;margin-top:6px;color:#fff;line-height:1.4;overflow-wrap:anywhere}
   .flist{background:var(--pll);border-radius:16px;padding:4px 14px}
   .frow{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid #e6e6e1;font-size:13.5px}
   .frow:last-child{border-bottom:0}
@@ -262,6 +263,9 @@
     margin:0!important;
   }
 
+  .syncBadge{max-width:calc(100% - 28px);pointer-events:auto;line-height:1.5}.syncBadge button{margin-left:8px;border:0;border-radius:8px;padding:5px 8px;color:#285e38;background:#e4f2e6;font:inherit;cursor:pointer}
+  .manualSync{display:flex;align-items:center;gap:4px;min-height:36px;padding:5px 8px;border:1px solid rgba(255,255,255,.24);border-radius:18px;background:rgba(255,255,255,.08);color:#fff;font-size:11px;white-space:nowrap;cursor:pointer}.manualSync svg{width:14px;height:14px}.manualSync:disabled{opacity:.65;cursor:wait}.manualSync:focus-visible{outline:2px solid #fff;outline-offset:2px}
+  .top.collapsed .manualSync{display:none}
 </style>
 </head>
 <body>
@@ -272,7 +276,7 @@
     <div class="hcard">
       <div class="hrow">
         <div class="htitle">수도권 나들이<b>어디 가볼까?</b></div>
-        <div class="headActions"><div class="hcount" id="hcount">0곳</div><button type="button" class="searchFold" id="searchFold" onclick="toggleTopSearch()" aria-label="검색창 접기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9.5l5 5 5-5"/></svg></button></div>
+        <div class="headActions"><button type="button" class="manualSync" id="manualSync" onclick="manualSyncNow()" title="현재 기기의 장소 정보를 서버에 저장" aria-label="현재 장소 정보를 서버에 동기화"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></svg><span id="manualSyncLabel">동기화</span></button><div class="hcount" id="hcount">0곳</div><button type="button" class="searchFold" id="searchFold" onclick="toggleTopSearch()" aria-label="검색창 접기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9.5l5 5 5-5"/></svg></button></div>
       </div>
       <form class="sbox" id="topSearchBox" onsubmit="event.preventDefault();searchKeyword()">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5cb86e" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
@@ -375,7 +379,7 @@
     </div>
   </div>
 
-  <div class="syncBadge" id="syncBadge">저장 중…</div>
+  <div class="syncBadge" id="syncBadge" role="status" aria-live="polite">저장 중…</div>
   <div class="toast" id="toast"></div>
   <input type="file" id="importFile" accept=".json" hidden onchange="importData(event)">
 </div>
@@ -405,25 +409,6 @@ const FIELDS = [['fee','입장료(1인당)'],['feature','특징'],['transport','
 const EMPTY = {fee:'',feature:'',transport:'',distance:'',carTime:'',transitTime:'',hours:'',hoursSchedule:[],link:'',parking:'',note:''};
 
 const DEFAULT_PLACES = [
-  ['루덴시아 테마파크',0,37.3946,127.4440,'루덴시아'],
-  ['서울 식물원',1,37.5694,126.8350,'서울식물원'],
-  ['명동 롯백',0,37.5647,126.9817,'롯데백화점 본점'],
-  ['수원 경기도서관',1,37.2880,127.0530,'경기도서관'],
-  ['인천 송도 국제도서관',0,37.3905,126.6433,'송도국제도서관'],
-  ['인왕산 숲속 쉼터',0,37.5805,126.9600,'인왕산 숲속쉼터'],
-  ['여의도 열기구',0,37.5260,126.9230,'서울달'],
-  ['인천 인스파이어 리조트',0,37.4627,126.3925,'인스파이어 엔터테인먼트 리조트'],
-  ['인천 월미 바다열차',1,37.4752,126.6170,'월미바다열차'],
-  ['인천 송도 센트럴파크',1,37.3925,126.6390,'송도센트럴파크'],
-  ['가평 이탈리아 마을',0,37.7178,127.4836,'이탈리아마을 피노키오와다빈치'],
-  ['동대문 DDP 디자인 둘레길',0,37.5665,127.0092,'동대문디자인플라자'],
-  ['광명동굴',0,37.4263,126.8664,'광명동굴'],
-  ['스타벅스 경동 1960점',0,37.5803,127.0393,'스타벅스 경동1960점'],
-  ['경기미래교육 파주캠퍼스',0,37.7900,126.6940,'경기미래교육 파주캠퍼스'],
-  ['수원 월화원',0,37.2620,127.0315,'월화원'],
-  ['망원시장',0,37.5560,126.9065,'망원시장'],
-  ['을왕리 메이드림 카페',0,37.4475,126.3740,'메이드림 을왕리'],
-  ['김포 자투라 카페',1,37.6870,126.6150,'자투라 김포']
 ].map((r,i)=>({id:'p'+i,name:r[0],rec:!!r[1],lat:r[2],lng:r[3],geoQuery:r[4],address:'',...EMPTY}));
 
 let places = [];
@@ -432,25 +417,84 @@ let map, ps, geocoder, overlays = {}, tmpOverlay = null;
 let editingId = null, pending = null, filter = 'all', resCache = [], hoursDraft=[], selectedDays=[1,2,3,4,5];
 
 function localPlaces(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s) return JSON.parse(s); }catch(e){} return null; }
-function save(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
-  if(!currentUser || !db) return;
-  $('syncBadge').classList.add('show');
-  clearTimeout(syncTimer);
-  syncTimer=setTimeout(syncAllPlaces,350);
+// Keep a per-document outbox until the server acknowledges each write.
+const pendingWrites=new Map();
+let syncInFlight=null, saveRevision=0, badgeTimer=null;
+function persistOutbox(userId=currentUser?.uid){
+  if(!userId) return;
+  try{localStorage.setItem(STORAGE_KEY+'-outbox-'+userId,JSON.stringify([...pendingWrites].filter(([,item])=>item.userId===userId)));}catch(e){console.warn(e);}
 }
-async function syncAllPlaces(){
-  if(!currentUser||!db) return;
+function restoreOutbox(userId){
   try{
-    const ref=db.collection('users').doc(currentUser.uid).collection('places');
-    const snap=await ref.get();
-    const keep=new Set(places.map(p=>String(p.id)));
-    let batch=db.batch(), ops=0;
-    snap.docs.forEach(d=>{if(!keep.has(d.id)){batch.delete(d.ref);ops++;}});
-    places.forEach(p=>{batch.set(ref.doc(String(p.id)),{...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});ops++;});
-    if(ops) await batch.commit();
-    $('syncBadge').textContent='저장됨'; setTimeout(()=>$('syncBadge').classList.remove('show'),900);
-  }catch(e){ console.error(e); $('syncBadge').textContent='저장 실패'; toast('온라인 저장에 실패했어요'); }
+    const stored=JSON.parse(localStorage.getItem(STORAGE_KEY+'-outbox-'+userId)||'[]');
+    stored.forEach(([id,item])=>{if(item.userId===userId){pendingWrites.set(id,item);saveRevision=Math.max(saveRevision,item.revision||0);}});
+  }catch(e){console.warn(e);}
+}
+function mergePendingPlaces(){
+  const merged=new Map(places.map(p=>[String(p.id),p]));
+  pendingWrites.forEach((item,id)=>{if(item.userId===currentUser?.uid){if(item.data===null)merged.delete(id);else merged.set(id,item.data);}});
+  places=[...merged.values()];
+}
+function cacheLocal(){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(places));}catch(e){console.warn(e);}}
+function syncStatus(message,retry=false){
+  clearTimeout(badgeTimer);
+  const busy=message.includes('저장 중');
+  $('manualSync').disabled=busy;
+  $('manualSyncLabel').textContent=busy?'저장 중':message==='서버 저장 완료'?'완료':retry?'재시도':'동기화';
+  $('syncBadge').textContent=message;
+  if(retry){
+    const button=document.createElement('button');button.type='button';button.textContent='재시도';
+    button.onclick=()=>syncAllPlaces();$('syncBadge').appendChild(button);
+  }
+  $('syncBadge').classList.add('show');
+}
+function manualSyncNow(){
+  if(!currentUser||!db){toast('로그인 후 동기화할 수 있어요');return;}
+  // Explicitly upload this device's current records; do not delete other-device records.
+  save();
+  return syncAllPlaces();
+}
+function save(id=null,deleted=false){
+  cacheLocal();
+  const userId=currentUser?.uid;
+  if(!userId||!db){syncStatus('기기에만 저장됨 · 로그인 필요');return;}
+  const changed=id===null?places:places.filter(p=>String(p.id)===String(id));
+  if(deleted) pendingWrites.set(String(id),{userId,revision:++saveRevision,data:null});
+  else changed.forEach(p=>pendingWrites.set(String(p.id),{userId,revision:++saveRevision,data:JSON.parse(JSON.stringify(p))}));
+  persistOutbox(userId);
+  syncStatus('기기에 저장됨 · 서버 저장 중…');
+  clearTimeout(syncTimer);syncTimer=setTimeout(syncAllPlaces,350);
+}
+function syncAllPlaces(){
+  clearTimeout(syncTimer);
+  if(syncInFlight) return syncInFlight;
+  if(!currentUser||!db||!pendingWrites.size) return Promise.resolve();
+  const userId=currentUser.uid;
+  syncInFlight=Promise.resolve().then(async()=>{
+    let slowTimer;
+    try{
+      syncStatus('서버 저장 중…');
+      slowTimer=setTimeout(()=>syncStatus('기기에 저장됨 · 서버 확인 대기 중'),12000);
+      while(currentUser?.uid===userId){
+        const entries=[...pendingWrites].filter(([,item])=>item.userId===userId).slice(0,400);
+        if(!entries.length) break;
+        const ref=db.collection('users').doc(userId).collection('places');
+        const batch=db.batch();
+        entries.forEach(([id,item])=>{
+          if(item.data===null) batch.delete(ref.doc(id));
+          else batch.set(ref.doc(id),{...item.data,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        });
+        await batch.commit();
+        entries.forEach(([id,item])=>{if(pendingWrites.get(id)===item) pendingWrites.delete(id);});
+        persistOutbox(userId);
+      }
+      if(currentUser?.uid===userId){syncStatus('서버 저장 완료');badgeTimer=setTimeout(()=>$('syncBadge').classList.remove('show'),2500);}
+    }catch(e){
+      console.error(e);
+      if(currentUser?.uid===userId) syncStatus('기기에만 저장됨 · 서버 저장 실패 ('+(e.code||'연결 오류')+')',true);
+    }finally{clearTimeout(slowTimer);syncInFlight=null;}
+  });
+  return syncInFlight;
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function $(id){return document.getElementById(id);}
@@ -527,6 +571,7 @@ function loginError(e){
 async function handleAuth(user){
   if(!user){currentUser=null;$('loginGate').classList.remove('hide');return;}
   currentUser=user;$('loginGate').classList.add('hide');
+  restoreOutbox(user.uid);
   // 지도와 Firestore는 서로 기다리지 않고 병렬로 시작합니다.
   if(!map) startKakao(); else {map.relayout();renderMarkers();}
   try{
@@ -542,21 +587,29 @@ async function handleAuth(user){
     // Listener still allows recovery when Firestore becomes available later.
     startPlaceListener();
   }
+  if(pendingWrites.size) syncAllPlaces();
 }
 async function loadUserPlaces(){
   const ref=db.collection('users').doc(currentUser.uid).collection('places');
   const snap=await ref.get();
   if(snap.empty){
     const local=localPlaces(); places=(local&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
+    save();
     await syncAllPlaces();
   }else places=snap.docs.map(d=>({id:d.id,...d.data(),updatedAt:undefined}));
+  mergePendingPlaces();
   localStorage.setItem(STORAGE_KEY,JSON.stringify(places));
   renderMarkers();
 }
 function startPlaceListener(){
   if(unsubscribePlaces) unsubscribePlaces();
   unsubscribePlaces=db.collection('users').doc(currentUser.uid).collection('places').onSnapshot(snap=>{
-    places=snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return{id:d.id,...x};});
+    const incoming=new Map(snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return[d.id,{id:d.id,...x}];}));
+    pendingWrites.forEach((item,id)=>{
+      if(item.userId!==currentUser?.uid) return;
+      if(item.data===null) incoming.delete(id);else incoming.set(id,item.data);
+    });
+    places=[...incoming.values()];
     localStorage.setItem(STORAGE_KEY,JSON.stringify(places)); renderMarkers();
     if($('lbody')) renderListBody(filter==='rec'?'rec':'all');
   },e=>{console.error(e);toast('데이터 동기화에 실패했어요');});
@@ -977,12 +1030,12 @@ function saveForm(){
   let id=editingId;
   if(id) Object.assign(places.find(x=>x.id===id),data);
   else { id='p'+Date.now(); places.push({id,...data,lat:pending.lat,lng:pending.lng,address:pending.address}); }
-  save(); renderMarkers(); toast('저장했어요'); openDetail(id);
+  save(id); renderMarkers(); toast('기기에 저장했어요. 서버 저장 상태를 확인해 주세요.'); openDetail(id);
 }
 function removePlace(id){
   const p=places.find(x=>x.id===id);
   if(!confirm(`'${p.name}'을(를) 삭제할까요?`)) return;
-  places=places.filter(x=>x.id!==id); save(); renderMarkers(); closeSheet(); toast('삭제했어요');
+  places=places.filter(x=>x.id!==id); save(id,true); renderMarkers(); closeSheet(); toast('삭제 요청을 저장했어요');
 }
 
 /* ---------- 설정 ---------- */
@@ -1011,7 +1064,8 @@ function importData(e){
     const arr=JSON.parse(r.result);
     if(!Array.isArray(arr)||!arr.every(p=>p.name&&typeof p.lat==='number')) throw 0;
     if(!confirm('현재 데이터를 백업 파일 내용으로 바꿀까요?')) return;
-    places=arr.map((p,i)=>({...EMPTY,id:p.id||('p'+Date.now()+i),...p})); save(); renderMarkers(); closeSheet(); toast('불러왔어요');
+    const previousIds=places.map(p=>String(p.id));
+    places=arr.map((p,i)=>({...EMPTY,id:p.id||('p'+Date.now()+i),...p})); previousIds.filter(id=>!places.some(p=>String(p.id)===id)).forEach(id=>save(id,true)); save(); renderMarkers(); closeSheet(); toast('불러왔어요');
   }catch(err){toast('올바른 백업 파일이 아니에요');} };
   r.readAsText(f); e.target.value='';
 }
