@@ -31,7 +31,6 @@
   #map{position:absolute;inset:0}
   .hint{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(31,58,95,.9);color:#fff;font-size:12px;padding:6px 14px;border-radius:20px;z-index:5;pointer-events:none;white-space:nowrap}
   .hint.move{background:#c0392b}
-  /* 핀 */
   .pin{width:26px;height:26px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--main);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;cursor:pointer}
   .pin span{transform:rotate(45deg);font-size:12px;line-height:1}
   .pin.rec{background:var(--gold)}
@@ -39,7 +38,6 @@
   .pinlabel{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:#fff;border:1px solid var(--line);font-size:11px;padding:1px 6px;border-radius:4px;white-space:nowrap;display:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
   .pinwrap:hover .pinlabel{display:block}
   .tmp{width:14px;height:14px;border-radius:50%;background:#e74c3c;border:3px solid #fff;box-shadow:0 0 0 2px #e74c3c}
-  /* 검색/근처 결과 패널 */
   #panel{position:absolute;top:10px;right:10px;width:320px;max-height:calc(100% - 60px);background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.2);z-index:6;display:none;flex-direction:column}
   #panel.show{display:flex}
   #panel .ph{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
@@ -57,7 +55,6 @@
   .btn.primary{background:var(--main);color:#fff;border-color:var(--main)}
   .btn.danger{color:#c0392b;border-color:#e8b4ae}
   .x{border:0;background:none;font-size:18px;cursor:pointer;color:#888}
-  /* 모달 */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:2000}
   .modal.show{display:flex}
   .box{background:#fff;border-radius:10px;padding:18px 20px;width:min(520px,94vw);max-height:90vh;overflow-y:auto}
@@ -81,16 +78,16 @@
   .tbox td.l{text-align:left}
   .tbox tbody tr{cursor:pointer}
   .tbox tbody tr:hover{background:#eef3fa}
-  .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;z-index:3000;opacity:0;transition:opacity .2s;pointer-events:none}
+  .toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:6px;font-size:13px;z-index:5000;opacity:0;transition:opacity .2s;pointer-events:none}
   .toast.show{opacity:1}
-  /* 설정 화면 */
   #setup{position:fixed;inset:0;background:var(--bg);z-index:4000;display:none;align-items:center;justify-content:center}
   #setup.show{display:flex}
-  #setup .box{width:min(560px,94vw)}
+  #setup .box{width:min(580px,94vw)}
   #setup ol{font-size:13px;line-height:1.8;margin:10px 0 14px 18px;color:#444}
   #setup code{background:#eef1f5;padding:1px 5px;border-radius:3px}
   #setup input{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:14px}
-  .warn{background:#fff4e5;border:1px solid #f5c27a;color:#8a5300;padding:10px 12px;border-radius:6px;font-size:13px;line-height:1.6;margin-bottom:12px}
+  .warn{background:#fff4e5;border:1px solid #f5c27a;color:#8a5300;padding:10px 12px;border-radius:6px;font-size:13px;line-height:1.6;margin:10px 0}
+  .warn.err{background:#fdecea;border-color:#f1a9a0;color:#a12a1c}
   @media(max-width:768px){.wrap{flex-direction:column-reverse}aside{width:100%;height:36%;border-right:0;border-top:1px solid var(--line)}#panel{width:calc(100% - 20px)}}
 </style>
 </head>
@@ -105,7 +102,7 @@
     <button onclick="openTable()">표 보기</button>
     <button onclick="exportData()">백업 저장</button>
     <button onclick="document.getElementById('importFile').click()">백업 불러오기</button>
-    <button onclick="resetKey()">API 키 변경</button>
+    <button onclick="showSetup()">API 키 변경</button>
   </div>
   <input type="file" id="importFile" accept=".json" hidden onchange="importData(event)">
 </header>
@@ -129,12 +126,10 @@
   </div>
 </div>
 
-<!-- 상세 팝업 -->
 <div class="modal" id="detailModal" onclick="if(event.target===this)closeModal('detailModal')">
   <div class="box detail" id="detailBox"></div>
 </div>
 
-<!-- 입력/수정 -->
 <div class="modal" id="formModal">
   <div class="box">
     <h2 id="formTitle">장소 추가</h2>
@@ -161,7 +156,6 @@
   </div>
 </div>
 
-<!-- 표 보기 -->
 <div class="modal" id="tableModal" onclick="if(event.target===this)closeModal('tableModal')">
   <div class="tbox">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -174,21 +168,26 @@
   </div>
 </div>
 
-<!-- 최초 설정 -->
 <div id="setup">
   <div class="box">
     <h2>카카오맵 API 키 입력</h2>
+    <div class="warn err" id="errBox" style="display:none"></div>
     <div class="warn" id="fileWarn" style="display:none">
-      지금 파일을 더블클릭해서 열었어요. 카카오맵은 이렇게 열면 동작하지 않아요.<br>
-      같은 폴더의 <b>run.bat</b>을 실행해서 <code>http://localhost:8080</code>으로 열어 주세요.
+      파일을 더블클릭해서 열면 카카오맵이 동작하지 않아요. GitHub Pages 주소(또는 localhost)로 열어 주세요.
+    </div>
+    <div style="font-size:13px;margin:10px 0 6px">지금 접속한 주소 — <b>이 값을 그대로</b> 도메인에 등록하세요</div>
+    <div style="display:flex;gap:6px">
+      <input type="text" id="originBox" readonly style="background:#eef1f5">
+      <button class="btn" onclick="copyOrigin()">복사</button>
     </div>
     <ol>
-      <li><a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a> 로그인 → 앱 생성</li>
-      <li>[카카오맵] → [사용 설정] 상태를 <b>ON</b></li>
-      <li>[플랫폼 키] → [JavaScript 키] → JavaScript SDK 도메인에 <code>http://localhost:8080</code> 등록</li>
-      <li>JavaScript 키를 복사해서 아래에 붙여넣기</li>
+      <li><a href="https://developers.kakao.com" target="_blank">developers.kakao.com</a> → 내 앱 선택</li>
+      <li>[제품 설정] → [카카오맵] → [사용 설정] <b>ON</b></li>
+      <li>[앱] → [플랫폼 키] → <b>[JavaScript 키]를 클릭</b> → <b>JavaScript SDK 도메인</b>에 위 주소 등록<br>
+        <span style="color:#888">※ 앱 기본 정보의 '앱 대표 도메인'이 아니에요. 끝에 / 나 경로는 붙이지 마세요.</span></li>
+      <li>같은 화면의 <b>JavaScript 키</b> 복사 (REST API 키 아님) → 아래에 붙여넣기</li>
     </ol>
-    <input type="text" id="keyInput" placeholder="JavaScript 키 (REST API 키 아님)">
+    <input type="text" id="keyInput" placeholder="JavaScript 키">
     <div class="foot"><button class="btn primary" onclick="saveKey()">시작하기</button></div>
   </div>
 </div>
@@ -201,7 +200,6 @@ const KEY_STORE = 'sudo-map-kakao-key';
 const FIELDS = [['fee','입장료(1인당)'],['feature','특징'],['transport','이동수단'],['distance','거리'],['hours','운영시간'],['link','링크'],['parking','주차여부'],['note','비고']];
 const EMPTY = {fee:'',feature:'',transport:'',distance:'',hours:'',link:'',parking:'',note:''};
 
-// 기본 장소 (첫 실행 시 카카오 검색으로 정확한 위치 자동 보정)
 const DEFAULT_PLACES = [
   ['루덴시아 테마파크',0,37.3946,127.4440,'루덴시아'],
   ['서울 식물원',1,37.5694,126.8350,'서울식물원'],
@@ -238,30 +236,52 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 function closeModal(id){document.getElementById(id).classList.remove('show');}
 
 // ---------- 키 / SDK 로드 ----------
-function showSetup(){
+function showSetup(err){
   document.getElementById('fileWarn').style.display = location.protocol==='file:' ? 'block' : 'none';
+  document.getElementById('originBox').value = location.protocol==='file:' ? '(파일로 열림 — 등록 불가)' : location.origin;
   document.getElementById('keyInput').value = localStorage.getItem(KEY_STORE)||'';
+  const b = document.getElementById('errBox');
+  if(err){ b.innerHTML = err; b.style.display='block'; } else b.style.display='none';
   document.getElementById('setup').classList.add('show');
 }
+function copyOrigin(){
+  const v = location.origin;
+  (navigator.clipboard ? navigator.clipboard.writeText(v) : Promise.reject()).then(()=>toast('복사했어요')).catch(()=>{
+    const i=document.getElementById('originBox'); i.select(); document.execCommand('copy'); toast('복사했어요');
+  });
+}
 function saveKey(){
-  const k = document.getElementById('keyInput').value.trim();
+  const k = document.getElementById('keyInput').value.replace(/\s/g,'');
   if(!k){ toast('키를 입력해 주세요'); return; }
+  if(location.protocol==='file:'){ toast('파일로 열면 동작하지 않아요. GitHub Pages 주소로 열어 주세요'); return; }
   localStorage.setItem(KEY_STORE, k); location.reload();
 }
-function resetKey(){ showSetup(); }
 
 (function boot(){
   const key = localStorage.getItem(KEY_STORE);
   if(location.protocol==='file:' || !key){ showSetup(); return; }
   const s = document.createElement('script');
   s.src = 'https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
-  s.onload = ()=>{ try{ kakao.maps.load(init); }catch(e){ failLoad(); } };
-  s.onerror = failLoad;
+  s.onload = ()=>{
+    if(!window.kakao || !kakao.maps || !kakao.maps.load){ diagnose(key); return; }
+    try{ kakao.maps.load(init); }catch(e){ diagnose(key); }
+  };
+  s.onerror = ()=>diagnose(key);
   document.head.appendChild(s);
 })();
-function failLoad(){
-  toast('카카오맵을 불러오지 못했어요. 키·도메인 설정을 확인해 주세요');
-  showSetup();
+
+// 실패 원인 진단
+async function diagnose(key){
+  let msg = '';
+  try{
+    const r = await fetch('https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&autoload=false');
+    const t = await r.text();
+    if(r.status===401) msg = '<b>오류 401 — 도메인 또는 키 문제</b><br>· 지금 주소 <code>'+esc(location.origin)+'</code>가 JavaScript SDK 도메인에 정확히 등록됐는지 확인하세요.<br>· REST API 키를 넣지 않았는지 확인하세요.';
+    else if(r.status===403) msg = '<b>오류 403 — 카카오맵 사용 설정 OFF</b><br>[제품 설정] → [카카오맵] → [사용 설정]을 ON으로 바꾸고 몇 분 뒤 새로고침하세요.<br><span style="font-size:12px">'+esc(t.slice(0,160))+'</span>';
+    else if(!r.ok) msg = '<b>오류 '+r.status+'</b><br>'+esc(t.slice(0,200));
+  }catch(e){}
+  if(!msg) msg = '<b>지도를 불러오지 못했어요.</b> 아래를 순서대로 확인하세요.<br>① REST API 키가 아닌 <b>JavaScript 키</b>인지<br>② 지금 주소가 <b>JavaScript SDK 도메인</b>에 등록됐는지 (앱 대표 도메인 아님)<br>③ <b>카카오맵 사용 설정</b>이 ON인지<br>④ 광고 차단 확장 프로그램이나 회사망이 dapi.kakao.com을 막고 있지 않은지<br><span style="font-size:12px">F12 → Network 탭 → sdk.js 를 클릭하면 정확한 원인 메시지를 볼 수 있어요.</span>';
+  showSetup(msg);
 }
 
 // ---------- 초기화 ----------
@@ -275,7 +295,6 @@ function init(){
   autoLocate();
 }
 
-// 기본 장소 위치 자동 보정 (최초 1회)
 function autoLocate(){
   const todo = places.filter(p=>p.geoQuery);
   if(!todo.length) return;
@@ -292,7 +311,7 @@ function autoLocate(){
   }, i*120));
 }
 
-// ---------- 핀 ----------
+// ---------- 핀 / 목록 ----------
 function visible(p){ return !document.getElementById('onlyRec').checked || p.rec; }
 function renderMarkers(){
   Object.values(overlays).forEach(o=>o.setMap(null)); overlays = {};
@@ -301,7 +320,7 @@ function renderMarkers(){
     el.className='pinwrap';
     el.innerHTML = `<div class="pinlabel">${esc(p.name)}</div><div class="pin ${p.rec?'rec':''}"><span>${p.rec?'⭐':''}</span></div>`;
     el.addEventListener('click', ev=>{ ev.stopPropagation(); openDetail(p.id); });
-    overlays[p.id] = new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(p.lat,p.lng), content:el, yAnchor:1.05, xAnchor:0.15, zIndex:3, map});
+    overlays[p.id] = new kakao.maps.CustomOverlay({position:new kakao.maps.LatLng(p.lat,p.lng), content:el, yAnchor:1.05, xAnchor:0.15, zIndex:3, clickable:true, map});
   });
 }
 function renderList(){
@@ -313,12 +332,13 @@ function renderList(){
 }
 function renderAll(){ if(map) renderMarkers(); renderList(); }
 function focusPlace(id){
-  const p = places.find(x=>x.id===id); if(!p||!map) return;
+  const p = places.find(x=>x.id===id); if(!p) return;
+  if(!map){ openDetail(id); return; }
   map.setLevel(5); map.panTo(new kakao.maps.LatLng(p.lat,p.lng));
   setTimeout(()=>openDetail(id),350);
 }
 
-// ---------- 상세 팝업 ----------
+// ---------- 상세 ----------
 function linkHtml(u){ return /^https?:\/\//.test(u||'') ? `<a href="${esc(u)}" target="_blank">${esc(u)}</a>` : esc(u); }
 function openDetail(id){
   const p = places.find(x=>x.id===id); if(!p) return;
@@ -341,21 +361,24 @@ function setTmp(latlng){
   const el=document.createElement('div'); el.className='tmp';
   tmpOverlay = new kakao.maps.CustomOverlay({position:latlng, content:el, zIndex:2, map});
 }
+function catShort(c){ const a=(c||'').split('>').map(s=>s.trim()); return a[a.length-1]||''; }
 function onMapClick(latlng){
   if(movingId){ finishMove(latlng); return; }
   setTmp(latlng);
+  resCache = [];
   showPanel('근처 장소 찾는 중…','<div class="empty">검색 중…</div>');
   const lat=latlng.getLat(), lng=latlng.getLng();
   const found = {}; let building = null, addr = '';
   let left = CATS.length + 1;
   const finish = ()=>{
     if(--left>0) return;
+    resCache = [];
     const list = Object.values(found).sort((a,b)=>a.distance-b.distance).slice(0,15);
     let html = '';
     if(building) html += resItem({place_name:building, address_name:addr, category:'건물', y:lat, x:lng, distance:0});
     html += list.map(resItem).join('');
     html += resItem({place_name:'', address_name:addr||'선택한 위치', category:'', y:lat, x:lng, custom:true});
-    showPanel('이 근처 장소', html || '<div class="empty">근처에 장소가 없어요</div>');
+    showPanel('이 근처 장소', html);
   };
   geocoder.coord2Address(lng, lat, (r,st)=>{
     if(st===kakao.maps.services.Status.OK && r[0]){
@@ -369,15 +392,17 @@ function onMapClick(latlng){
     finish();
   },{location:latlng, radius:80, sort:kakao.maps.services.SortBy.DISTANCE}));
 }
-function catShort(c){ const a=(c||'').split('>').map(s=>s.trim()); return a[a.length-1]||''; }
 
 // ---------- 키워드 검색 ----------
 function searchKeyword(){
-  const kw = document.getElementById('kw').value.trim(); if(!kw||!ps) return;
-  showPanel(`'${esc(kw)}' 검색 결과`,'<div class="empty">검색 중…</div>');
+  const kw = document.getElementById('kw').value.trim(); if(!kw) return;
+  if(!ps){ toast('지도가 아직 연결되지 않았어요'); return; }
+  const title = `'${esc(kw)}' 검색 결과`;
+  showPanel(title,'<div class="empty">검색 중…</div>');
   ps.keywordSearch(kw,(data,st)=>{
-    if(st!==kakao.maps.services.Status.OK){ showPanel(`'${esc(kw)}' 검색 결과`,'<div class="empty">검색 결과가 없어요</div>'); return; }
-    showPanel(`'${esc(kw)}' 검색 결과`, data.map(d=>resItem({...d, category:catShort(d.category_name), distance:null})).join(''));
+    resCache = [];
+    if(st!==kakao.maps.services.Status.OK){ showPanel(title,'<div class="empty">검색 결과가 없어요</div>'); return; }
+    showPanel(title, data.map(d=>resItem({...d, category:catShort(d.category_name), distance:null})).join(''));
     const b = new kakao.maps.LatLngBounds(); data.forEach(d=>b.extend(new kakao.maps.LatLng(d.y,d.x))); map.setBounds(b);
   },{size:15});
 }
@@ -394,12 +419,11 @@ function resItem(d){
     <button class="btn primary" onclick="event.stopPropagation();addFrom(${i})">＋추가</button></div>`;
 }
 function showPanel(title, body){
-  if(!body.includes('검색 중')) {} 
   document.getElementById('panelTitle').innerHTML = title;
   document.getElementById('panelBody').innerHTML = body;
   document.getElementById('panel').classList.add('show');
 }
-function closePanel(){ document.getElementById('panel').classList.remove('show'); if(tmpOverlay){tmpOverlay.setMap(null);tmpOverlay=null;} resCache=[]; }
+function closePanel(){ document.getElementById('panel').classList.remove('show'); if(tmpOverlay){tmpOverlay.setMap(null);tmpOverlay=null;} }
 function peek(i){ const d=resCache[i]; const ll=new kakao.maps.LatLng(d.y,d.x); setTmp(ll); map.panTo(ll); }
 function addFrom(i){
   const d = resCache[i];
@@ -420,7 +444,7 @@ function openForm(id){
   document.querySelectorAll('.f_tr').forEach(c=>c.checked=tr.includes(c.value));
   document.querySelectorAll('input[name=f_parking]').forEach(r=>r.checked=r.value===(p.parking||''));
   document.getElementById('formModal').classList.add('show');
-  setTimeout(()=>document.getElementById(id||pending.name?'f_fee':'f_name').focus(),50);
+  setTimeout(()=>document.getElementById(p.name?'f_fee':'f_name').focus(),50);
 }
 function v(k){ return document.getElementById('f_'+k).value.trim(); }
 function saveForm(){
@@ -429,9 +453,8 @@ function saveForm(){
     hours:v('hours'), link:v('link'), note:v('note'),
     transport:[...document.querySelectorAll('.f_tr:checked')].map(c=>c.value).join(', '),
     parking:(document.querySelector('input[name=f_parking]:checked')||{}).value||''};
-  let id=editingId;
-  if(id) Object.assign(places.find(x=>x.id===id),data);
-  else { id='p'+Date.now(); places.push({id,...data,lat:pending.lat,lng:pending.lng,address:pending.address}); closePanel(); }
+  if(editingId) Object.assign(places.find(x=>x.id===editingId),data);
+  else { places.push({id:'p'+Date.now(),...data,lat:pending.lat,lng:pending.lng,address:pending.address}); closePanel(); }
   save(); closeModal('formModal'); renderAll(); toast('저장되었습니다');
 }
 function removePlace(id){
@@ -442,6 +465,7 @@ function removePlace(id){
 
 // ---------- 위치 이동 ----------
 function startMove(id){
+  if(!map){ toast('지도가 연결된 뒤 사용할 수 있어요'); return; }
   closeModal('detailModal'); movingId=id;
   const h=document.getElementById('hint'); h.textContent='옮길 위치를 지도에서 클릭하세요 (Esc: 취소)'; h.classList.add('move');
 }
