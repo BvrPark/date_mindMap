@@ -42,6 +42,8 @@
   #map{position:absolute;inset:0;background:#eef0f3}
   .hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom));z-index:15;background:rgba(51,51,50,.82);color:#fff;font-size:12px;padding:7px 14px;border-radius:20px;white-space:nowrap;pointer-events:none;transition:opacity .3s}
   .hint.hide{opacity:0}
+  .hint{animation:hintAutoHide .3s ease 3s forwards}
+  @keyframes hintAutoHide{to{opacity:0;visibility:hidden}}
 
   .pinwrap{position:relative;display:flex;flex-direction:column;align-items:center}
   .pin{width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--p2);border:3px solid #fff;box-shadow:0 4px 10px rgba(51,51,50,.45);display:flex;align-items:center;justify-content:center}
@@ -346,6 +348,7 @@ function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 function $(id){return document.getElementById(id);}
 // 안내 문구는 지도 성공 여부와 관계없이 앱 진입 3초 후 숨깁니다.
 setTimeout(()=>{const h=document.getElementById('hint');if(h)h.classList.add('hide');},3000);
+setTimeout(()=>{const st=document.getElementById('mapState');if(st && !st.classList.contains('hide')) showMapError('지도 연결을 확인해 주세요','카카오맵 응답이 없어요. JavaScript SDK 도메인과 카카오맵 사용 설정을 확인한 뒤 다시 불러와 주세요.');},8000);
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2000);}
 
 /* ---------- 바텀시트 ---------- */
@@ -417,9 +420,21 @@ function loginError(e){
 async function handleAuth(user){
   if(!user){currentUser=null;$('loginGate').classList.remove('hide');return;}
   currentUser=user;$('loginGate').classList.add('hide');
-  await loadUserPlaces();
-  startPlaceListener();
+  // 지도와 Firestore는 서로 기다리지 않고 병렬로 시작합니다.
   if(!map) startKakao(); else {map.relayout();renderMarkers();}
+  try{
+    await Promise.race([
+      loadUserPlaces(),
+      new Promise((_,reject)=>setTimeout(()=>reject(new Error('Firestore timeout')),6000))
+    ]);
+    startPlaceListener();
+  }catch(e){
+    console.error(e);
+    const local=localPlaces(); places=(local&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
+    renderMarkers(); toast('온라인 데이터가 지연되어 기기 저장본을 표시해요');
+    // Listener still allows recovery when Firestore becomes available later.
+    startPlaceListener();
+  }
 }
 async function loadUserPlaces(){
   const ref=db.collection('users').doc(currentUser.uid).collection('places');
@@ -493,6 +508,7 @@ async function diagnose(key){
 }
 
 /* ---------- 초기화 ---------- */
+window.addEventListener('resize',()=>{if(map)map.relayout();});
 function init(){
   const mapEl=$('map');
   map=new kakao.maps.Map(mapEl,{center:new kakao.maps.LatLng(37.50,126.92),level:10,draggable:true,scrollwheel:true});
