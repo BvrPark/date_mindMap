@@ -227,6 +227,18 @@
   .travelQuick{display:flex;gap:6px;margin-top:8px}.travelQuick button{flex:1;border:0;background:var(--pl);color:var(--p3);height:30px;border-radius:9px;font-size:10.5px;font-weight:700}.travelQuick button:active{background:var(--p2);color:#fff}
   @media(min-width:430px){.travelGrid{grid-template-columns:1fr 1fr}.travelQuick{display:none}}
 
+
+  /* 상단 검색 접기 동작 보정 */
+  .top.collapsed{padding-top:calc(env(safe-area-inset-top) + 8px);pointer-events:none}.top.collapsed .hcard{pointer-events:auto;position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 8px);margin:0!important}.top.collapsed .chips{pointer-events:auto;margin-top:0!important;transform:none!important;padding-right:52px;min-height:42px;align-items:center}
+  .hcard.searchCollapsed{width:42px!important;height:42px!important;min-height:42px;padding:0!important;background:transparent!important;border-radius:50%!important;box-shadow:none!important}.hcard.searchCollapsed .hrow{height:42px!important;margin:0!important}.hcard.searchCollapsed .htitle,.hcard.searchCollapsed .hcount,.hcard.searchCollapsed .sbox{display:none!important}.hcard.searchCollapsed .hrow>div{display:flex!important;position:static!important}.hcard.searchCollapsed .searchFold{width:42px!important;height:42px!important;background:var(--dk)!important;box-shadow:0 3px 9px rgba(0,0,0,.22)!important}
+  /* 소요시간 카드 */
+  .travelGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.travelBox{position:relative;width:100%;border:1px solid var(--line)!important;background:#f7f8f4!important;border-radius:14px!important;padding:11px!important;text-align:left;display:block;color:var(--tx)}.travelLabel{display:flex!important;align-items:center;gap:7px;margin:0 0 10px!important}.travelValue{display:block;background:#fff;border:1px solid var(--line);border-radius:11px;padding:10px 34px 9px 10px}.travelValue strong{display:block;font-size:14px}.travelValue small{display:block;font-size:9.5px;color:var(--sub);margin-top:3px}.travelArrow{position:absolute;right:18px;bottom:23px;width:17px;height:17px;fill:none;stroke:var(--p3);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  /* 휠형 시간 선택 */
+  .wheelPicker{padding:2px 4px 8px}.wheelCols{display:grid;grid-template-columns:1fr 1fr;gap:18px;position:relative}.wheelCols:after{content:"";position:absolute;left:0;right:0;top:76px;height:44px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);pointer-events:none}.wheelCols>div>span{display:block;text-align:center;font-size:12px;color:var(--sub);margin-bottom:7px}.wheelCols select{width:100%;height:190px;border:0;background:#fff;color:var(--tx);font:inherit;font-size:20px;text-align:center;outline:0;overflow-y:auto}.wheelCols option{padding:8px}.wheelActions{display:flex;gap:8px;margin-top:10px}
+
+
+  .timeModal{position:absolute;inset:0;z-index:75;background:rgba(30,30,30,.34);display:none;align-items:flex-end}.timeModal.show{display:flex}.timePanel{width:100%;background:#fff;border-radius:20px 20px 0 0;padding:10px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -8px 24px rgba(0,0,0,.12)}.timePanelHead{display:flex;align-items:center;justify-content:space-between;padding:5px 0 10px}.timePanelHead b{font-size:16px}.timePanelHead button{border:0;background:#ededeb;width:32px;height:32px;border-radius:50%;font-size:17px;color:#666}
+
 </style>
 </head>
 <body>
@@ -280,6 +292,15 @@
     <div class="sbody" id="sbody"></div>
   </div>
 
+
+
+  <div class="timeModal" id="timeModal" onclick="if(event.target===this)closeTimePicker()">
+    <div class="timePanel">
+      <div class="timePanelHead"><b id="timePickerTitle">소요 시간</b><button type="button" onclick="closeTimePicker()">×</button></div>
+      <div class="wheelCols"><div><span>시간</span><select id="wheelHour" size="5"></select></div><div><span>분</span><select id="wheelMin" size="5"></select></div></div>
+      <div class="wheelActions"><button type="button" class="pbtn ghost" onclick="resetWheelTime()">초기화</button><button type="button" class="pbtn main" onclick="applyWheelTime()">확인</button></div>
+    </div>
+  </div>
 
   <!-- Firebase 로그인 -->
   <div id="loginGate">
@@ -773,22 +794,29 @@ function parseTravelTime(text){
 }
 function travelPicker(key,label,value){
   const t=parseTravelTime(value);
-  return `<div class="travelBox">
-    <div class="travelLabel"><span class="travelIcon">${key==='car'?'C':'T'}</span><b>${label}</b></div>
-    <div class="travelControls">
-      <div class="timeStepper"><button type="button" onclick="stepTravel('${key}','h',-1)">−</button><div><strong id="f_${key}Hour">${t.h}</strong><small>시간</small></div><button type="button" onclick="stepTravel('${key}','h',1)">＋</button></div>
-      <div class="timeStepper"><button type="button" onclick="stepTravel('${key}','m',-5)">−</button><div><strong id="f_${key}Min">${t.m}</strong><small>분</small></div><button type="button" onclick="stepTravel('${key}','m',5)">＋</button></div>
-    </div>
-    <div class="travelQuick">
-      <button type="button" onclick="setTravel('${key}',0,30)">30분</button><button type="button" onclick="setTravel('${key}',1,0)">1시간</button><button type="button" onclick="setTravel('${key}',1,30)">1시간 30분</button>
-    </div>
-  </div>`;
+  return `<button type="button" class="travelBox" onclick="openTimePicker('${key}','${label}')">
+    <span class="travelLabel"><span class="travelIcon">${key==='car'?'C':'T'}</span><b>${label}</b></span>
+    <span class="travelValue"><strong id="f_${key}Display">${t.h||t.m?`${t.h?t.h+'시간 ':''}${t.m?t.m+'분':''}`:'미설정'}</strong><small>눌러서 시간 선택</small></span>
+    <input type="hidden" id="f_${key}Hour" value="${t.h}"><input type="hidden" id="f_${key}Min" value="${t.m}">
+    <svg class="travelArrow" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  </button>`;
 }
-function travelNum(key,part){return +$('f_'+key+(part==='h'?'Hour':'Min')).textContent||0;}
-function updateTravel(key,h,m){h=Math.max(0,Math.min(24,h));m=Math.max(0,Math.min(55,Math.round(m/5)*5));$('f_'+key+'Hour').textContent=h;$('f_'+key+'Min').textContent=m;}
-function stepTravel(key,part,delta){let h=travelNum(key,'h'),m=travelNum(key,'m');if(part==='h')h+=delta;else m+=delta;if(m>=60){h=Math.min(24,h+1);m=0;}if(m<0){if(h>0){h--;m=55}else m=0;}updateTravel(key,h,m);}
-function setTravel(key,h,m){updateTravel(key,h,m);}
+function travelNum(key,part){return +$('f_'+key+(part==='h'?'Hour':'Min')).value||0;}
+function updateTravel(key,h,m){h=Math.max(0,Math.min(24,h));m=Math.max(0,Math.min(59,m));$('f_'+key+'Hour').value=h;$('f_'+key+'Min').value=m;const d=$('f_'+key+'Display');if(d)d.textContent=h||m?`${h?h+'시간 ':''}${m?m+'분':''}`.trim():'미설정';}
 function getTravelTime(key){const h=travelNum(key,'h'),m=travelNum(key,'m');if(!h&&!m)return '';return `${h?h+'시간 ':''}${m?m+'분':''}`.trim();}
+let activeTimeKey='';
+function openTimePicker(key,label){
+  activeTimeKey=key;
+  $('timePickerTitle').textContent=label+' 소요 시간';
+  const curH=travelNum(key,'h'),curM=travelNum(key,'m');
+  $('wheelHour').innerHTML=Array.from({length:25},(_,i)=>`<option value="${i}">${i}</option>`).join('');
+  $('wheelMin').innerHTML=Array.from({length:60},(_,i)=>`<option value="${i}">${i}</option>`).join('');
+  $('wheelHour').value=curH;$('wheelMin').value=curM;
+  $('timeModal').classList.add('show');
+}
+function closeTimePicker(){$('timeModal').classList.remove('show');activeTimeKey='';}
+function resetWheelTime(){if(activeTimeKey)updateTravel(activeTimeKey,0,0);closeTimePicker();}
+function applyWheelTime(){if(!activeTimeKey)return;updateTravel(activeTimeKey,+$('wheelHour').value,+$('wheelMin').value);closeTimePicker();}
 function openForm(id){
   editingId=id;
   const p=id?places.find(x=>x.id===id):{...EMPTY,name:pending.name,address:pending.address};
@@ -801,8 +829,8 @@ function openForm(id){
     <div class="fg"><label>추천</label><div class="seg"><label><input type="checkbox" id="f_rec" ${ck(p.rec)}><span>★ 추천 장소</span></label></div></div>
     <div class="fg"><label>입장료(1인당)</label><input type="text" id="f_fee" value="${esc(p.fee)}"></div>
     <div class="fg"><label>소요 시간</label><div class="travelGrid">
-      ${travelPicker('car','승용차',p.carTime||p.distance||'')}
-      ${travelPicker('transit','대중교통',p.transitTime||'')}
+      ${travelPicker('car','승용차',p._draftCar?`${p._draftCar.h}시간 ${p._draftCar.m}분`:p.carTime||p.distance||'')}
+      ${travelPicker('transit','대중교통',p._draftTransit?`${p._draftTransit.h}시간 ${p._draftTransit.m}분`:p.transitTime||'')}
     </div></div>
     <div class="fg"><label>특징</label><textarea id="f_feature">${esc(p.feature)}</textarea></div>
     <div class="fg"><label>이동수단</label><div class="seg">
