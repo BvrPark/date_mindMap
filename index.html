@@ -2,6 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- Fetch independent SDK files early; execution still respects Firebase dependencies. -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://dapi.kakao.com" crossorigin>
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#5cb86e">
 <title>나들이 지도</title>
@@ -487,6 +494,10 @@ function saveKey(){
   const k=$('keyInput').value.replace(/\s/g,''); if(!k){toast('키를 입력해 주세요');return;}
   localStorage.setItem(KEY_STORE,k); location.reload();
 }
+// Start public map SDK preparation while Firebase restores the login session.
+// User data is still requested only after authentication.
+let kakaoSDKPromise=null;
+if(location.protocol!=='file:' && getKey()) prepareKakaoSDK().catch(()=>{});
 (async function boot(){
   if(!firebaseReady()){
     $('loginMsg').textContent='index.html의 FIREBASE_CONFIG를 먼저 입력해 주세요.';
@@ -494,8 +505,10 @@ function saveKey(){
   }
   try{
     await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
-    await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js');
-    await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js');
+    await Promise.all([
+      loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js'),
+      loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js')
+    ]);
     firebase.initializeApp(FIREBASE_CONFIG);
     auth=firebase.auth(); db=firebase.firestore();
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
@@ -606,23 +619,37 @@ function showMapError(title, text){
   $('mapStateTitle').textContent=title; $('mapStateText').textContent=text;
   $('mapRetry').style.display='inline-block'; $('mapState').classList.remove('hide');
 }
-function startKakao(active){
-  return new Promise((resolve,reject)=>{
+function prepareKakaoSDK(){
+  if(kakaoSDKPromise) return kakaoSDKPromise;
+  kakaoSDKPromise=new Promise((resolve,reject)=>{
     const key=getKey();
     if(location.protocol==='file:'||!key){reject(new Error('등록된 웹 주소로 열어 주세요. 카카오 JavaScript 키와 허용 도메인 설정도 확인해 주세요.'));return;}
+    let settled=false;
     const script=document.createElement('script');
+    const finish=(error)=>{
+      if(settled) return;
+      settled=true;clearTimeout(timer);
+      script.onload=script.onerror=null;
+      if(error){script.remove();reject(error);}else resolve();
+    };
+    const timer=setTimeout(()=>finish(new Error('카카오맵 응답이 늦어지고 있어요. 연결을 확인하고 다시 시도해 주세요.')),20000);
     script.async=true;
     script.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
-    script.onerror=()=>reject(new Error('카카오맵을 내려받지 못했어요. 네트워크와 JavaScript 키, 허용 도메인을 확인해 주세요.'));
+    script.onerror=()=>finish(new Error('카카오맵을 내려받지 못했어요. 네트워크와 JavaScript 키, 허용 도메인을 확인해 주세요.'));
     script.onload=()=>{
-      if(!active()) return;
-      if(!window.kakao?.maps?.load){reject(new Error('카카오맵 인증에 실패했어요. JavaScript 키와 SDK 도메인을 확인해 주세요.'));return;}
-      kakao.maps.load(()=>{
-        if(!active()) return;
-        try{init(()=>{if(active()) resolve();});}catch(e){reject(new Error('지도 초기화에 실패했어요: '+e.message));}
-      });
+      if(settled) return;
+      if(!window.kakao?.maps?.load){finish(new Error('카카오맵 인증에 실패했어요. JavaScript 키와 SDK 도메인을 확인해 주세요.'));return;}
+      try{kakao.maps.load(()=>finish());}catch(e){finish(e);}
     };
     document.head.appendChild(script);
+  }).catch(error=>{kakaoSDKPromise=null;throw error;});
+  return kakaoSDKPromise;
+}
+async function startKakao(active){
+  await prepareKakaoSDK();
+  if(!active()) throw new Error('취소된 요청');
+  return new Promise((resolve,reject)=>{
+    try{init(()=>{if(active()) resolve();});}catch(e){reject(new Error('지도 초기화에 실패했어요: '+e.message));}
   });
 }
 async function diagnose(key){
