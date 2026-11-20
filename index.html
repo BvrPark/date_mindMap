@@ -759,7 +759,7 @@ function focusPlace(id){
 
 /* ---------- 상세 ---------- */
 function val(p,k){
-  const v=p[k]; if(!v) return '<span class="no">—</span>';
+  const v=k==='hours'?displayHours(p):p[k]; if(!v) return '<span class="no">—</span>';
   if(k==='link' && /^https?:\/\//.test(v)) return `<a href="${esc(v)}" target="_blank">${esc(v)}</a>`;
   return esc(v);
 }
@@ -770,6 +770,7 @@ function formatFee(value){
   const match=text.match(/^(?:₩\s*)?(\d+|\d{1,3}(?:,\d{3})+)(?:\s*원)?$/);
   if(!match) return text;
   const digits=match[1].replace(/,/g,'').replace(/^0+(?=\d)/,'');
+  if(digits==='0') return '무료';
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g,',')+'원';
 }
 function stat(label,v){ return `<div class="dstat"><small>${label}</small><b>${esc(v||'—')}</b></div>`; }
@@ -1016,6 +1017,12 @@ function applyHoursTime(){
 }
 function addHoursBlock(closed){
   if(!selectedDays.length){toast('요일을 하나 이상 선택해 주세요');return;}
+  if(closed){
+    // A closure overrides every time block on the selected days only.
+    hoursDraft=hoursDraft.map(x=>({...x,days:x.days.filter(d=>!selectedDays.includes(d))})).filter(x=>x.days.length);
+    hoursDraft.push({days:[...selectedDays],closed:true,start:'',end:''});
+    $('manualHours').classList.remove('show');renderHoursList();return;
+  }
   const start=$('hoursStart').value,end=$('hoursEnd').value;
   if(!closed&&(!start||!end||start>=end)){toast('종료 시간을 시작 시간보다 늦게 선택해 주세요');return;}
   const conflicts=[];
@@ -1029,14 +1036,27 @@ function addHoursBlock(closed){
   $('manualHours').classList.remove('show');renderHoursList();
 }
 function removeHoursBlock(i){hoursDraft.splice(i,1);renderHoursList();}
-function formatHours(){return hoursDraft.map(x=>`${dayLabel(x.days)} ${x.closed?'휴무':x.start+'~'+x.end}`).join(' / ');}
+function orderedHours(schedule){
+  const rank=x=>Math.min(...(x.days||[]).map(d=>(Number(d)+6)%7),7);
+  return [...schedule].sort((a,b)=>rank(a)-rank(b)||(a.start||'').localeCompare(b.start||''));
+}
+function normalizeHoursText(value){
+  const text=String(value||'');
+  const parts=text.split(/\s*\/\s*/);
+  // Reorder labelled groups only; leave free-form descriptions untouched.
+  if(parts.length<2 || !parts.every(part=>/^(매일|평일|주말)(?:\s|$)/.test(part))) return text;
+  const rank=part=>part.startsWith('매일')?0:part.startsWith('평일')?1:2;
+  return parts.sort((a,b)=>rank(a)-rank(b)).join(' / ');
+}
+function formatHours(schedule=hoursDraft){return orderedHours(schedule).map(x=>`${dayLabel(x.days)} ${x.closed?'휴무':x.start+'~'+x.end}`).join(' / ');}
+function displayHours(place){return Array.isArray(place.hoursSchedule)&&place.hoursSchedule.length?formatHours(place.hoursSchedule):normalizeHoursText(place.hours);}
 function renderHoursList(){
   const list=$('hoursList'),preview=$('hoursPreview');if(!list||!preview)return;
-  list.innerHTML=hoursDraft.length?hoursDraft.map((x,i)=>`<div class="hoursItem"><div class="hoursItemText"><b>${dayLabel(x.days)}</b><span>${x.closed?'휴무':x.start+' ~ '+x.end}</span></div><button type="button" class="hoursDel" onclick="removeHoursBlock(${i})">×</button></div>`).join(''):'<div class="hoursEmpty">등록한 운영시간이 여기에 표시돼요.</div>';
+  list.innerHTML=hoursDraft.length?orderedHours(hoursDraft).map(x=>`<div class="hoursItem"><div class="hoursItemText"><b>${dayLabel(x.days)}</b><span>${x.closed?'휴무':x.start+' ~ '+x.end}</span></div><button type="button" class="hoursDel" onclick="removeHoursBlock(${hoursDraft.indexOf(x)})">×</button></div>`).join(''):'<div class="hoursEmpty">등록한 운영시간이 여기에 표시돼요.</div>';
   const text=formatHours();preview.textContent=text?'표시 결과 · '+text:'운영시간 미설정';$('f_hours').value=text;
 }
 function toggleManualHours(force){const el=$('manualHours');if(!el)return;const show=force===true||!el.classList.contains('show');el.classList.toggle('show',show);if(show){hoursDraft=[];renderHoursList();setTimeout(()=>$('f_hours_manual').focus(),50);}}
-function v(k){if(k==='hours'){const m=$('manualHours');return m&&m.classList.contains('show')?$('f_hours_manual').value.trim():formatHours();}return $('f_'+k).value.trim();}
+function v(k){if(k==='hours'){const m=$('manualHours');return m&&m.classList.contains('show')?normalizeHoursText($('f_hours_manual').value.trim()):formatHours();}const value=$('f_'+k).value.trim();return k==='fee'&&formatFee(value)==='무료'?'무료':value;}
 function saveForm(){
   const name=v('name'); if(!name){toast('이름을 입력해 주세요');return;}
   const manualHours=$('manualHours')?.classList.contains('show');
