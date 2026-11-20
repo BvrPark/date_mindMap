@@ -159,6 +159,21 @@
   .syncBadge{position:absolute;right:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:16;background:#fff;color:var(--p3);border:1px solid var(--line);border-radius:16px;padding:5px 9px;font-size:10.5px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:0;transition:.2s;pointer-events:none}
   .syncBadge.show{opacity:1}
 
+
+  .mapState{position:absolute;inset:0;z-index:12;background:#f4f5f0;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center}
+  .mapState.hide{display:none}
+  .mapStateCard{max-width:330px;background:#fff;border:1px solid var(--line);border-radius:20px;padding:22px 18px;box-shadow:0 10px 28px rgba(51,51,50,.12)}
+  .mapStateIcon{width:52px;height:52px;border-radius:16px;background:var(--pl);color:var(--p3);display:flex;align-items:center;justify-content:center;margin:0 auto 13px;font-size:24px}
+  .mapStateCard b{display:block;font-size:16px;margin-bottom:7px}.mapStateCard p{font-size:12.5px;color:var(--sub);line-height:1.65;white-space:pre-line}
+  .mapRetry{margin-top:14px;border:0;border-radius:12px;background:var(--p2);color:#fff;font-weight:700;padding:10px 16px}
+  .tapPulse{position:absolute;width:34px;height:34px;border:3px solid var(--p2);border-radius:50%;transform:translate(-50%,-50%) scale(.4);opacity:.8;z-index:11;pointer-events:none;animation:tapPulse .45s ease-out forwards}
+  @keyframes tapPulse{to{transform:translate(-50%,-50%) scale(1.5);opacity:0}}
+  @media(max-width:480px){
+    .top{padding-left:10px;padding-right:10px}.hcard{padding:13px 13px 12px;border-radius:18px}.chips{margin-top:8px}
+    .chip{padding:7px 11px}.sheet{max-height:88%;border-radius:22px 22px 0 0}.sbody{padding-left:13px;padding-right:13px}
+    #map{touch-action:pan-x pan-y}.hint{max-width:calc(100% - 28px);white-space:normal;text-align:center;line-height:1.35}
+  }
+
 </style>
 </head>
 <body>
@@ -189,6 +204,7 @@
   <!-- 지도 -->
   <div class="view">
     <div id="map"></div>
+    <div class="mapState" id="mapState"><div class="mapStateCard"><div class="mapStateIcon">⌖</div><b id="mapStateTitle">지도를 불러오는 중</b><p id="mapStateText">잠시만 기다려 주세요.</p><button class="mapRetry" id="mapRetry" style="display:none" onclick="location.reload()">다시 불러오기</button></div></div>
     <div class="hint" id="hint">지도를 누르면 근처 장소를 골라 추가할 수 있어요</div>
   </div>
 
@@ -263,12 +279,12 @@ const KAKAO_KEY = 'b2fc031427d4b586d087d71fbae94f90';
 
 /* Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성의 값을 넣으세요. */
 const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyCQbSh7ufh1t_y81_v1cEn9-7Bxn2HKL5k',
-  authDomain: 'date-app-e99fe.firebaseapp.com',
-  projectId: 'date-app-e99fe',
-  storageBucket: 'date-app-e99fe.firebasestorage.app',
-  messagingSenderId: '833024231883',
-  appId: '1:833024231883:web:19c0f8a5d91815cf0ace4e'
+  apiKey: "AIzaSyCQbSh7ufh1t_y81_v1cEn9-7Bxn2HKL5k",
+  authDomain: "date-app-e99fe.firebaseapp.com",
+  projectId: "date-app-e99fe",
+  storageBucket: "date-app-e99fe.firebasestorage.app",
+  messagingSenderId: "833024231883",
+  appId: "1:833024231883:web:19c0f8a5d91815cf0ace4e"
 };
 const STAR = "<svg class=\"st\" viewBox=\"0 0 24 24\"><path d=\"M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z\"/></svg>";
 const PIN = "<svg class=\"pi\" viewBox=\"0 0 24 24\"><path d=\"M12 22s-7-6.3-7-12a7 7 0 0114 0c0 5.7-7 12-7 12z\"/><circle cx=\"12\" cy=\"10\" r=\"2.6\" fill=\"#fff\"/></svg>";
@@ -372,9 +388,6 @@ function saveKey(){
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     $('googleLoginBtn').addEventListener('click', googleLogin);
     auth.onAuthStateChanged(handleAuth);
-    auth.getRedirectResult().catch(e=>{
-      $('loginMsg').textContent=loginError(e); console.error(e);
-    });
   }catch(e){ console.error(e); $('loginMsg').textContent='Firebase 연결에 실패했어요. 설정값과 도메인을 확인해 주세요.'; }
 })();
 function firebaseReady(){ return FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.authDomain && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId; }
@@ -386,18 +399,17 @@ async function googleLogin(){
   const provider=new firebase.auth.GoogleAuthProvider();
   provider.setCustomParameters({prompt:'select_account'});
   try{
-    const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-    if(mobile) await auth.signInWithRedirect(provider);
-    else await auth.signInWithPopup(provider);
+    await auth.signInWithPopup(provider);
   }catch(e){
-    if(['auth/popup-blocked','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(e.code)) await auth.signInWithRedirect(provider);
-    else {$('loginMsg').textContent=loginError(e); console.error(e); btn.disabled=false; btn.style.opacity='1';}
+    $('loginMsg').textContent=loginError(e); console.error(e);
+    btn.disabled=false; btn.style.opacity='1';
   }
 }
 function loginError(e){
   if(e.code==='auth/unauthorized-domain') return 'Firebase Authentication의 승인된 도메인에 현재 GitHub Pages 도메인을 추가해 주세요.';
   if(e.code==='auth/operation-not-allowed') return 'Firebase Authentication에서 Google 로그인을 사용 설정해 주세요.';
   if(e.code==='auth/popup-closed-by-user') return '로그인 창이 닫혔어요. 다시 시도해 주세요.';
+  if(e.code==='auth/popup-blocked') return '브라우저에서 팝업이 차단됐어요. 이 사이트의 팝업을 허용한 뒤 다시 눌러 주세요.';
   return '로그인할 수 없어요: '+(e.message||e.code||'설정을 확인해 주세요.');
 }
 async function handleAuth(user){
@@ -405,7 +417,7 @@ async function handleAuth(user){
   currentUser=user;$('loginGate').classList.add('hide');
   await loadUserPlaces();
   startPlaceListener();
-  if(!map) startKakao(); else renderMarkers();
+  if(!map) startKakao(); else {map.relayout();renderMarkers();}
 }
 async function loadUserPlaces(){
   const ref=db.collection('users').doc(currentUser.uid).collection('places');
@@ -426,13 +438,18 @@ function startPlaceListener(){
   },e=>{console.error(e);toast('데이터 동기화에 실패했어요');});
 }
 async function logout(){ if(confirm('로그아웃할까요?')){if(unsubscribePlaces)unsubscribePlaces();await auth.signOut();location.reload();} }
+function showMapError(title, text){
+  $('mapStateTitle').textContent=title; $('mapStateText').textContent=text;
+  $('mapRetry').style.display='inline-block'; $('mapState').classList.remove('hide');
+}
 function startKakao(){
   const key=getKey();
-  if(location.protocol==='file:'||!key){showSetup();return;}
+  if(location.protocol==='file:'||!key){showMapError('카카오맵 설정이 필요해요','카카오 JavaScript 키가 없거나 파일로 직접 열렸어요.');showSetup();return;}
   const s=document.createElement('script');
   s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
-  s.onload=()=>{if(!window.kakao||!kakao.maps||!kakao.maps.load){diagnose(key);return;}try{kakao.maps.load(init);}catch(e){diagnose(key);}};
-  s.onerror=()=>diagnose(key);document.head.appendChild(s);
+  const timer=setTimeout(()=>showMapError('지도를 불러오지 못했어요','카카오 지도 서버 연결이 지연되고 있어요. 모바일 데이터 또는 Wi-Fi를 확인한 뒤 다시 시도해 주세요.'),8000);
+  s.onload=()=>{clearTimeout(timer);if(!window.kakao||!kakao.maps||!kakao.maps.load){diagnose(key);return;}try{kakao.maps.load(init);}catch(e){console.error(e);diagnose(key);}};
+  s.onerror=()=>{clearTimeout(timer);showMapError('지도를 불러오지 못했어요','카카오맵 JavaScript 키, JavaScript SDK 도메인, 카카오맵 사용 설정을 확인해 주세요.');diagnose(key);};document.head.appendChild(s);
 }
 async function diagnose(key){
   let msg='';
@@ -444,16 +461,29 @@ async function diagnose(key){
     else if(!r.ok) msg='<b>오류 '+r.status+'</b><br>'+esc(t.slice(0,200));
   }catch(e){}
   if(!msg) msg='<b>지도를 불러오지 못했어요.</b><br>① JavaScript 키인지 ② JavaScript SDK 도메인 등록 ③ 카카오맵 사용 설정 ON ④ 광고 차단·회사망 차단 여부를 확인하세요.';
+  showMapError('카카오맵 연결 오류', msg.replace(/<[^>]+>/g,' '));
   showSetup(msg);
 }
 
 /* ---------- 초기화 ---------- */
 function init(){
-  map=new kakao.maps.Map($('map'),{center:new kakao.maps.LatLng(37.50,126.92),level:10});
+  const mapEl=$('map');
+  map=new kakao.maps.Map(mapEl,{center:new kakao.maps.LatLng(37.50,126.92),level:10,draggable:true,scrollwheel:true});
   ps=new kakao.maps.services.Places();
   geocoder=new kakao.maps.services.Geocoder();
-  kakao.maps.event.addListener(map,'click',e=>onMapClick(e.latLng));
+  kakao.maps.event.addListener(map,'tilesloaded',()=>{$('mapState').classList.add('hide');});
+  kakao.maps.event.addListener(map,'click',e=>{
+    const pt=map.getProjection().pointFromCoords(e.latLng);
+    showTapPulse(pt.x,pt.y);
+    onMapClick(e.latLng);
+  });
+  setTimeout(()=>{map.relayout();map.setCenter(new kakao.maps.LatLng(37.50,126.92));},100);
   renderMarkers(); autoLocate();
+  setTimeout(()=>$('hint').classList.add('hide'),3000);
+  setTimeout(()=>{if(!$('mapState').classList.contains('hide'))showMapError('지도 타일이 표시되지 않아요','카카오 개발자 콘솔에서 현재 GitHub Pages 도메인이 JavaScript SDK 도메인에 등록됐는지 확인해 주세요.');},9000);
+}
+function showTapPulse(x,y){
+  const d=document.createElement('div');d.className='tapPulse';d.style.left=x+'px';d.style.top=y+'px';$('map').appendChild(d);setTimeout(()=>d.remove(),500);
 }
 function autoLocate(){
   const todo=places.filter(p=>p.geoQuery); if(!todo.length) return;
@@ -576,7 +606,7 @@ function onMapClick(ll){
   CATS.forEach(c=>ps.categorySearch(c,(d,st)=>{
     if(st===kakao.maps.services.Status.OK) d.forEach(x=>found[x.id]={...x,distance:+x.distance,category:catShort(x.category_name)});
     finish();
-  },{location:ll,radius:80,sort:kakao.maps.services.SortBy.DISTANCE}));
+  },{location:ll,radius:150,sort:kakao.maps.services.SortBy.DISTANCE}));
 }
 
 /* ---------- 검색 ---------- */
