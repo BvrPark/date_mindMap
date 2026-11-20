@@ -511,6 +511,9 @@ if(location.protocol!=='file:' && getKey()) prepareKakaoSDK().catch(()=>{});
     ]);
     firebase.initializeApp(FIREBASE_CONFIG);
     auth=firebase.auth(); db=firebase.firestore();
+    // Avoid buffered streaming connections in restrictive browsers/proxies.
+    // Configure before the first Firestore operation.
+    db.settings({experimentalForceLongPolling:true,experimentalAutoDetectLongPolling:false});
     await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     $('googleLoginBtn').addEventListener('click', googleLogin);
     auth.onAuthStateChanged(handleAuth);
@@ -586,10 +589,37 @@ async function handleAuth(user){
     if(generation!==startupGeneration) return;
     console.error(e);
     const message=e.code==='permission-denied'?'서버 데이터 접근 권한이 없어요. 로그인 계정과 Firestore 보안 규칙을 확인해 주세요.':
-      e.code==='unavailable'?'서버에 연결할 수 없어요. 인터넷 연결을 확인하고 다시 시도해 주세요.':
+      e.code==='unavailable'?'Firestore 서버 연결이 끊겼어요. Wi-Fi 대신 모바일 데이터로도 확인해 주세요. 광고 차단 또는 VPN이 있다면 이 사이트의 연결을 허용해 주세요.':
       e.message||'데이터를 불러오지 못했어요. 다시 시도해 주세요.';
-    showMapError('불러오지 못했어요',message+'\n'+(e.code?'오류 코드: '+e.code:''));
+    showMapError('불러오지 못했어요',message+'\n'+stages.map+' / '+stages.data+'\n'+(e.code?'오류 코드: '+e.code:''));
+    if(e.code==='unavailable'){
+      const detail=await diagnoseFirestore(user);
+      if(generation===startupGeneration && detail) showMapError('서버 연결을 확인해 주세요',detail);
+    }
   }finally{clearTimeout(timer);}
+}
+async function diagnoseFirestore(user){
+  // A bounded, authenticated HTTPS read distinguishes API/configuration errors
+  // from the SDK's streaming transport failure. Never opens the map or writes data.
+  const controller=new AbortController();
+  let timer;
+  try{
+    return await Promise.race([
+      (async()=>{
+        const token=await user.getIdToken();
+        if(controller.signal.aborted) return '';
+        const url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(FIREBASE_CONFIG.projectId)+'/databases/(default)/documents/users/'+encodeURIComponent(user.uid)+'/places?pageSize=1';
+        const response=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal:controller.signal});
+        if(response.ok) return '서버의 일반 연결은 정상이지만 실시간 연결이 실패했어요. 브라우저를 새로고침하거나 다른 네트워크에서 다시 시도해 주세요.\n확인 코드: realtime-connection-failed';
+        const body=await response.json();
+        const error=body.error||{};
+        return 'Firestore 서버가 요청을 거절했어요. 아래 오류로 Firebase 프로젝트 설정을 확인해 주세요.\n'+(error.status||response.status)+'\n'+(error.message||'서버 응답을 확인할 수 없어요.');
+      })(),
+      new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve('Firestore 서버의 일반 연결도 확인하지 못했어요. 다른 네트워크에서 다시 시도해 주세요.\n확인 코드: server-connection-timeout');},5000);})
+    ]);
+  }catch(e){
+    return 'Firestore 서버에 직접 연결하지 못했어요. 인터넷 연결, VPN 또는 이 사이트의 요청 차단 여부를 확인해 주세요.\n확인 코드: server-connection-failed';
+  }finally{clearTimeout(timer);controller.abort();}
 }
 async function loadUserPlaces(user,active,report=()=>{}){
   const ref=db.collection('users').doc(user.uid).collection('places');
