@@ -196,6 +196,17 @@
   .hoursList{display:flex;flex-direction:column;gap:7px;margin-top:10px}.hoursItem{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 10px}.hoursItemText{flex:1;min-width:0;font-size:12px;line-height:1.35}.hoursItemText b{display:block;font-size:12px}.hoursItemText span{color:var(--sub);font-size:11px}.hoursDel{border:0;background:#ededeb;color:#777;width:27px;height:27px;border-radius:50%;font-size:15px}
   .hoursEmpty{font-size:11px;color:var(--sub);text-align:center;padding:9px 0 2px}.hoursPreview{margin-top:10px;padding-top:9px;border-top:1px dashed #d9d9d4;font-size:11px;color:var(--sub);line-height:1.5}.manualHours{display:none;margin-top:10px}.manualHours.show{display:block}.manualHours input{width:100%;height:42px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 11px;font:inherit;font-size:13px}
 
+
+  /* 간편하지만 주요 정보가 잘 보이는 모바일 UI */
+  :root{--r:18px}.hcard,.sheet,.card,.dcard,.flist,.hoursCard,.travelBox{box-shadow:none}
+  .top{padding-left:10px;padding-right:10px}.hcard{transition:width .22s,height .22s,padding .22s,border-radius .22s;margin-left:0}
+  .hcard.searchCollapsed{width:42px;height:42px;padding:0;margin-left:auto;border-radius:50%;overflow:visible}.hcard.searchCollapsed .htitle,.hcard.searchCollapsed .hcount,.hcard.searchCollapsed .sbox{display:none}.hcard.searchCollapsed .hrow{height:42px;margin:0;justify-content:center}.hcard.searchCollapsed .hrow>div{display:flex!important}.hcard.searchCollapsed .searchFold{background:transparent;width:42px;height:42px}
+  .chips{gap:7px;margin-top:8px}.chip{box-shadow:0 2px 6px rgba(51,51,50,.12);padding:7px 15px}
+  .sheet{border-radius:20px 20px 0 0;max-height:90%}.grab{width:48px;height:5px;margin-top:9px;cursor:grab}.shead{padding:7px 16px 11px}.sbody{padding:0 12px 16px}.xbtn{width:34px;height:34px}
+  .fg{margin-bottom:14px}.fg>label{margin:0 0 7px 1px}.travelGrid{gap:8px}.travelBox{padding:11px;background:#f4f5f0;border-radius:13px}.travelLabel{font-size:12px;font-weight:700;margin-bottom:8px}.travelSelects{display:grid;grid-template-columns:1fr 1fr;gap:6px}.travelSelects select{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--tx);font:inherit;font-size:13px;padding:0 4px}
+  .hoursCard{padding:12px}.hoursQuick button{height:34px}.dayChips{margin-bottom:10px}.timeLine input{height:40px}.hoursAdd{width:100%;height:40px;border:0;border-radius:11px;background:var(--p2);color:#fff;font-size:12px;font-weight:700;margin-top:10px}.closedSection{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}.closedSection span{font-size:11.5px;color:var(--sub)}.hoursClosed{height:34px;min-width:66px;background:#fff;color:#c0504d;border:1px solid #e5c9c8;border-radius:10px;font-size:12px;font-weight:700}.hoursPreview{margin-top:10px}.hoursItem{padding:8px 9px}
+  .pbtn{height:44px;border-radius:12px}.dcard{border-radius:16px}.flist,.card{border-radius:14px}
+
 </style>
 </head>
 <body>
@@ -217,9 +228,6 @@
     <div class="chips" id="chips">
       <button class="chip on" data-f="all">전체</button>
       <button class="chip" data-f="rec">추천</button>
-      <button class="chip" data-f="car">승용차</button>
-      <button class="chip" data-f="bus">대중교통</button>
-      <button class="chip" data-f="park">주차 가능</button>
     </div>
   </div>
 
@@ -377,7 +385,6 @@ function openSheet(title, html){
 }
 function closeSheet(){
   $('dim').classList.remove('show'); $('sheet').classList.remove('show');
-  $('hint').classList.remove('hide');
   if(tmpOverlay){tmpOverlay.setMap(null);tmpOverlay=null;}
   setNav('navMap');
 }
@@ -656,30 +663,44 @@ const CATS=['AT4','CT1','CE7','FD6','CS2','MT1','SW8','PK6','HP8','PO3','BK9','A
 function catShort(c){const a=(c||'').split('>').map(s=>s.trim());return a[a.length-1]||'';}
 function setTmp(ll){ if(tmpOverlay) tmpOverlay.setMap(null); const el=document.createElement('div'); el.className='tmp'; tmpOverlay=new kakao.maps.CustomOverlay({position:ll,content:el,zIndex:2,map}); }
 function onMapClick(ll){
-  setTmp(ll); const keep=tmpOverlay;
-  pending={name:'',lat:ll.getLat(),lng:ll.getLng(),address:''};
-  openSheet('이 근처 장소',`<div class="empty">근처 장소를 찾는 중…</div><button class="pbtn main" style="width:100%;margin-top:8px" onclick="openForm(null)">이 위치를 직접 추가</button>`); tmpOverlay=keep;
-  const lat=ll.getLat(), lng=ll.getLng(), found={}; let building=null, addr='', left=CATS.length+1;
-  let finished=false;
-  const renderNearby=()=>{
-    if(finished)return; finished=true;
+  setTmp(ll);
+  const lat=ll.getLat(),lng=ll.getLng();
+  pending={name:'',lat,lng,address:''};
+  toast('선택한 장소를 확인하고 있어요');
+
+  // 지도 라벨을 직접 읽을 수는 없으므로, 클릭 좌표에서 가장 가까운 POI를 우선 선택합니다.
+  const found={}; let addr='',building='',left=CATS.length+1,done=false;
+  const choose=()=>{
+    if(done)return;done=true;
+    const list=Object.values(found).sort((a,b)=>a.distance-b.distance);
+    const nearest=list[0];
+    // 라벨을 정확히 누른 경우에만 바로 선택: 35m 이내. 그 외에는 후보 목록을 보여줍니다.
+    if(nearest && nearest.distance<=35){
+      pending={id:nearest.id,name:nearest.place_name,lat:+nearest.y,lng:+nearest.x,address:nearest.road_address_name||nearest.address_name||addr};
+      setTmp(new kakao.maps.LatLng(nearest.y,nearest.x));
+      openForm(null);
+      toast(nearest.place_name+' 선택');
+      return;
+    }
+    if(building){
+      pending={name:building,lat,lng,address:addr};
+      openForm(null);toast(building+' 선택');return;
+    }
     resCache=[];
-    let html='';
-    if(building) html+=resItem({place_name:building,address_name:addr,category:'건물',y:lat,x:lng,distance:0});
-    html+=Object.values(found).sort((a,b)=>a.distance-b.distance).slice(0,15).map(resItem).join('');
+    let html=list.slice(0,12).map(resItem).join('');
     html+=resItem({place_name:'',address_name:addr||'선택한 위치',y:lat,x:lng,custom:true});
-    $('sbody').innerHTML=html;
+    openSheet('장소 선택',html||'<div class="empty">선택할 장소를 찾지 못했어요</div>');
   };
-  const finish=()=>{if(--left<=0)renderNearby();};
-  setTimeout(renderNearby,2500);
+  const finish=()=>{if(--left<=0)choose();};
+  setTimeout(choose,1800);
   geocoder.coord2Address(lng,lat,(r,st)=>{
-    if(st===kakao.maps.services.Status.OK&&r[0]){const ra=r[0].road_address; addr=ra?ra.address_name:r[0].address.address_name; if(ra&&ra.building_name) building=ra.building_name;}
+    if(st===kakao.maps.services.Status.OK&&r[0]){const ra=r[0].road_address;addr=ra?ra.address_name:r[0].address.address_name;if(ra&&ra.building_name)building=ra.building_name;}
     finish();
   });
-  CATS.forEach(c=>ps.categorySearch(c,(d,st)=>{
-    if(st===kakao.maps.services.Status.OK) d.forEach(x=>found[x.id]={...x,distance:+x.distance,category:catShort(x.category_name)});
+  CATS.forEach(code=>ps.categorySearch(code,(data,st)=>{
+    if(st===kakao.maps.services.Status.OK)data.forEach(d=>{found[d.id]={...d,distance:+d.distance,category:catShort(d.category_name)};});
     finish();
-  },{location:ll,radius:150,sort:kakao.maps.services.SortBy.DISTANCE}));
+  },{location:ll,radius:80,sort:kakao.maps.services.SortBy.DISTANCE}));
 }
 
 /* ---------- 검색 ---------- */
@@ -687,8 +708,11 @@ function toggleTopSearch(force){
   const card=document.querySelector('.hcard');
   const collapse=typeof force==='boolean'?force:!card.classList.contains('searchCollapsed');
   card.classList.toggle('searchCollapsed',collapse);
-  $('searchFold').setAttribute('aria-label',collapse?'검색창 펼치기':'검색창 접기');
+  $('searchFold').setAttribute('aria-label',collapse?'검색 펼치기':'검색 접기');
+  localStorage.setItem('sudo-search-collapsed',collapse?'1':'0');
+  setTimeout(()=>{if(map)map.relayout();},220);
 }
+setTimeout(()=>{if(localStorage.getItem('sudo-search-collapsed')==='1')toggleTopSearch(true);},0);
 function openAddMenu(){
   openSheet('장소 추가',`<div class="addHero"><p>장소를 검색하거나 지도에서 위치를 직접 선택할 수 있어요.</p>
     <button class="addChoice" onclick="closeSheet();toggleTopSearch(false);setTimeout(()=>$('kw').focus(),280)"><span class="addChoiceIcon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span><span class="addChoiceText"><b>장소 검색</b><span>상호명이나 장소명으로 찾아서 추가</span></span><span class="addChoiceArrow">›</span></button>
@@ -721,6 +745,20 @@ function peek(i){ const d=resCache[i]; const ll=new kakao.maps.LatLng(d.y,d.x); 
 function addFrom(i){ const d=resCache[i]; pending={name:d.custom?'':d.place_name,lat:+d.y,lng:+d.x,address:d.road_address_name||d.address_name||''}; openForm(null); }
 
 /* ---------- 입력 폼 ---------- */
+function parseTravelTime(text){
+  const v=String(text||'');
+  const h=+(v.match(/(\d+)\s*시간/)||[])[1]||0;
+  let m=+(v.match(/(\d+)\s*분/)||[])[1]||0;
+  if(!h&&!m&&/^\d+$/.test(v.trim()))m=+v.trim();
+  return {h:Math.min(h,24),m:Math.min(Math.round(m/5)*5,55)};
+}
+function travelPicker(key,label,value){
+  const t=parseTravelTime(value);
+  const hours=Array.from({length:25},(_,i)=>`<option value="${i}" ${i===t.h?'selected':''}>${i}시간</option>`).join('');
+  const mins=Array.from({length:12},(_,i)=>{const m=i*5;return `<option value="${m}" ${m===t.m?'selected':''}>${m}분</option>`}).join('');
+  return `<div class="travelBox"><div class="travelLabel">${label}</div><div class="travelSelects"><select id="f_${key}Hour">${hours}</select><select id="f_${key}Min">${mins}</select></div></div>`;
+}
+function getTravelTime(key){const h=+$('f_'+key+'Hour').value,m=+$('f_'+key+'Min').value;if(!h&&!m)return '';return `${h?h+'시간 ':''}${m?m+'분':''}`.trim();}
 function openForm(id){
   editingId=id;
   const p=id?places.find(x=>x.id===id):{...EMPTY,name:pending.name,address:pending.address};
@@ -733,8 +771,8 @@ function openForm(id){
     <div class="fg"><label>추천</label><div class="seg"><label><input type="checkbox" id="f_rec" ${ck(p.rec)}><span>★ 추천 장소</span></label></div></div>
     <div class="fg"><label>입장료(1인당)</label><input type="text" id="f_fee" value="${esc(p.fee)}"></div>
     <div class="fg"><label>소요 시간</label><div class="travelGrid">
-      <div class="travelBox"><label>승용차</label><input type="text" id="f_carTime" value="${esc(p.carTime||p.distance||'')}" placeholder="예: 50분"></div>
-      <div class="travelBox"><label>대중교통</label><input type="text" id="f_transitTime" value="${esc(p.transitTime||'')}" placeholder="예: 1시간 20분"></div>
+      ${travelPicker('car','승용차',p.carTime||p.distance||'')}
+      ${travelPicker('transit','대중교통',p.transitTime||'')}
     </div></div>
     <div class="fg"><label>특징</label><textarea id="f_feature">${esc(p.feature)}</textarea></div>
     <div class="fg"><label>이동수단</label><div class="seg">
@@ -745,8 +783,10 @@ function openForm(id){
       <div class="hoursQuick"><button type="button" id="hq_all" onclick="quickDays('all')">전체</button><button type="button" id="hq_weekday" class="on" onclick="quickDays('weekday')">평일</button><button type="button" id="hq_weekend" onclick="quickDays('weekend')">주말</button></div>
       <div class="dayChips" id="dayChips"></div>
       <div class="timeLine"><input type="time" id="hoursStart" value="10:00"><i>~</i><input type="time" id="hoursEnd" value="18:00"></div>
-      <div class="hoursActions"><button type="button" class="hoursAdd" onclick="addHoursBlock(false)">선택 요일에 시간 적용</button><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">선택 요일 휴무</button></div>
-      <div class="hoursList" id="hoursList"></div><div class="hoursPreview" id="hoursPreview"></div>
+      <button type="button" class="hoursAdd" onclick="addHoursBlock(false)">시간 적용</button>
+      <div class="hoursList" id="hoursList"></div>
+      <div class="closedSection"><span>쉬는 날인가요?</span><button type="button" class="hoursClosed" onclick="addHoursBlock(true)">휴무</button></div>
+      <div class="hoursPreview" id="hoursPreview"></div>
       <div class="manualHours" id="manualHours"><input type="text" id="f_hours_manual" value="${esc(p.hours||'')}" placeholder="예: 매일 10:00~18:00 / 월요일 휴무"></div>
     </div><input type="hidden" id="f_hours" value="${esc(p.hours||'')}"></div>
     <div class="fg"><label>링크</label><input type="text" id="f_link" value="${esc(p.link)}" inputmode="url"></div>
@@ -798,7 +838,7 @@ function v(k){if(k==='hours'){const m=$('manualHours');return m&&m.classList.con
 function saveForm(){
   const name=v('name'); if(!name){toast('이름을 입력해 주세요');return;}
   const manualHours=$('manualHours')?.classList.contains('show');
-  const data={name,rec:$('f_rec').checked,fee:v('fee'),feature:v('feature'),distance:'',carTime:v('carTime'),transitTime:v('transitTime'),hours:v('hours'),hoursSchedule:manualHours?[]:hoursDraft.map(x=>({...x,days:[...x.days]})),link:v('link'),note:v('note'),
+  const data={name,rec:$('f_rec').checked,fee:v('fee'),feature:v('feature'),distance:'',carTime:getTravelTime('car'),transitTime:getTravelTime('transit'),hours:v('hours'),hoursSchedule:manualHours?[]:hoursDraft.map(x=>({...x,days:[...x.days]})),link:v('link'),note:v('note'),
     transport:[...document.querySelectorAll('.f_tr:checked')].map(c=>c.value).join(', '),
     parking:(document.querySelector('input[name=f_parking]:checked')||{}).value||''};
   let id=editingId;
@@ -812,6 +852,19 @@ function removePlace(id){
   places=places.filter(x=>x.id!==id); save(); renderMarkers(); closeSheet(); toast('삭제했어요');
 }
 
+/* ---------- 바텀시트 스와이프 ---------- */
+let sheetDrag={active:false,startY:0,lastY:0};
+function setupSheetSwipe(){
+  const sheet=$('sheet'),zones=[sheet.querySelector('.grab'),sheet.querySelector('.shead')];
+  zones.forEach(zone=>{
+    zone.style.touchAction='none';
+    zone.addEventListener('pointerdown',e=>{sheetDrag={active:true,startY:e.clientY,lastY:e.clientY};sheet.style.transition='none';zone.setPointerCapture?.(e.pointerId);});
+    zone.addEventListener('pointermove',e=>{if(!sheetDrag.active)return;sheetDrag.lastY=e.clientY;sheet.style.transform=`translateY(${Math.max(0,e.clientY-sheetDrag.startY)}px)`;});
+    const end=()=>{if(!sheetDrag.active)return;const dy=sheetDrag.lastY-sheetDrag.startY;sheetDrag.active=false;sheet.style.transition='';sheet.style.transform='';if(dy>70)closeSheet();};
+    zone.addEventListener('pointerup',end);zone.addEventListener('pointercancel',end);
+  });
+}
+setTimeout(setupSheetSwipe,0);
 /* ---------- 설정 ---------- */
 function openSettings(){
   setNav('navSet');
