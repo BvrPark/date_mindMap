@@ -15,7 +15,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Noto Sans CJK KR",sans-serif;color:var(--tx);background:#ededeb;overflow:hidden}
+  body{font-family:"Pretendard",sans-serif;color:var(--tx);background:#ededeb;overflow:hidden}
   button{font-family:inherit}
   .app{position:relative;height:100%;max-width:480px;margin:0 auto;background:#fff;display:flex;flex-direction:column;overflow:hidden}
   @media(min-width:481px){.app{box-shadow:0 10px 40px rgba(51,51,50,.18)}}
@@ -398,25 +398,6 @@ const FIELDS = [['fee','입장료(1인당)'],['feature','특징'],['transport','
 const EMPTY = {fee:'',feature:'',transport:'',distance:'',carTime:'',transitTime:'',hours:'',hoursSchedule:[],link:'',parking:'',note:''};
 
 const DEFAULT_PLACES = [
-  ['루덴시아 테마파크',0,37.3946,127.4440,'루덴시아'],
-  ['서울 식물원',1,37.5694,126.8350,'서울식물원'],
-  ['명동 롯백',0,37.5647,126.9817,'롯데백화점 본점'],
-  ['수원 경기도서관',1,37.2880,127.0530,'경기도서관'],
-  ['인천 송도 국제도서관',0,37.3905,126.6433,'송도국제도서관'],
-  ['인왕산 숲속 쉼터',0,37.5805,126.9600,'인왕산 숲속쉼터'],
-  ['여의도 열기구',0,37.5260,126.9230,'서울달'],
-  ['인천 인스파이어 리조트',0,37.4627,126.3925,'인스파이어 엔터테인먼트 리조트'],
-  ['인천 월미 바다열차',1,37.4752,126.6170,'월미바다열차'],
-  ['인천 송도 센트럴파크',1,37.3925,126.6390,'송도센트럴파크'],
-  ['가평 이탈리아 마을',0,37.7178,127.4836,'이탈리아마을 피노키오와다빈치'],
-  ['동대문 DDP 디자인 둘레길',0,37.5665,127.0092,'동대문디자인플라자'],
-  ['광명동굴',0,37.4263,126.8664,'광명동굴'],
-  ['스타벅스 경동 1960점',0,37.5803,127.0393,'스타벅스 경동1960점'],
-  ['경기미래교육 파주캠퍼스',0,37.7900,126.6940,'경기미래교육 파주캠퍼스'],
-  ['수원 월화원',0,37.2620,127.0315,'월화원'],
-  ['망원시장',0,37.5560,126.9065,'망원시장'],
-  ['을왕리 메이드림 카페',0,37.4475,126.3740,'메이드림 을왕리'],
-  ['김포 자투라 카페',1,37.6870,126.6150,'자투라 김포']
 ].map((r,i)=>({id:'p'+i,name:r[0],rec:!!r[1],lat:r[2],lng:r[3],geoQuery:r[4],address:'',...EMPTY}));
 
 let places = [];
