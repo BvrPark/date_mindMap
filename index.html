@@ -2,6 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta name="app-version" content="2026-11-21-note-card-v3">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#5cb86e">
 <title>나들이 지도</title>
@@ -89,6 +90,9 @@
   .frow div{flex:1;word-break:break-all;white-space:pre-wrap}
   .frow a{color:var(--p2)}
   .frow .no{color:#cfc9e0}
+  .detailNote{display:flex;align-items:flex-start;gap:12px;margin-top:12px;padding:13px 15px;min-height:50px;background:#e4f3e7;border:1px solid #bdddc4;border-radius:12px;color:#315c3d;font-size:14px;font-weight:600;line-height:1.6}
+  .detailNote svg{width:23px;height:23px;flex:0 0 23px;margin-top:0;color:#42764d}
+  .detailNoteText{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
   .acts{display:flex;gap:8px;margin-top:14px}
   .pbtn{flex:1;border:0;height:46px;border-radius:14px;font-size:14px;font-weight:700}
   .pbtn.main{background:var(--p2);color:#fff;box-shadow:0 6px 14px rgba(76,77,75,.3)}
@@ -776,7 +780,7 @@ function formatFee(value){
 function stat(label,v){ return `<div class="dstat"><small>${label}</small><b>${esc(v||'—')}</b></div>`; }
 function openDetail(id){
   const p=places.find(x=>x.id===id); if(!p) return;
-  const rows=FIELDS.filter(([k])=>!['fee','distance','parking','transport'].includes(k))
+  const rows=[['feature','특징'],['hours','운영시간'],['link','링크']]
     .map(([k,l])=>`<div class="frow"><span>${l}</span><div>${val(p,k)}</div></div>`).join('');
   openSheet('장소 정보',`
     <div class="dcard">
@@ -785,6 +789,7 @@ function openDetail(id){
       <div class="dstats">${stat('입장료',formatFee(p.fee))}${stat('승용차',p.carTime||p.distance)}${stat('대중교통',p.transitTime)}</div>
     </div>
     <div class="flist">${rows}</div>
+    ${String(p.note??'').trim()?`<div class="detailNote" aria-label="비고"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M8 8h5M8 12h3M14 17l-4 1 1-4L20 5l3 3-9 9zM18 7l3 3"/></svg><div class="detailNoteText">${esc(String(p.note).trim())}</div></div>`:''}
     <div class="acts">
       <button class="pbtn main" onclick="openForm('${id}')">수정</button>
       <button class="pbtn mint" onclick="openNavi('${id}')">길찾기</button>
