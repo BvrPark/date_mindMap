@@ -15,7 +15,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{font-family:"Pretendard",sans-serif;color:var(--tx);background:#ededeb;overflow:hidden}
+  body{font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Noto Sans CJK KR",sans-serif;color:var(--tx);background:#ededeb;overflow:hidden}
   button{font-family:inherit}
   .app{position:relative;height:100%;max-width:480px;margin:0 auto;background:#fff;display:flex;flex-direction:column;overflow:hidden}
   @media(min-width:481px){.app{box-shadow:0 10px 40px rgba(51,51,50,.18)}}
@@ -143,6 +143,22 @@
   svg.pi{width:1em;height:1em;fill:currentColor;vertical-align:-2px;flex-shrink:0}
   .pin.rec svg.st{fill:#ffd45c;width:14px;height:14px;transform:rotate(45deg)}
   .chip svg{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
+
+  /* ---------- Firebase 로그인 ---------- */
+  #loginGate{position:absolute;inset:0;z-index:100;background:#f4f5f0;display:flex;align-items:center;justify-content:center;padding:24px}
+  #loginGate.hide{display:none}
+  .loginCard{width:100%;max-width:390px;background:#fff;border-radius:24px;padding:28px 22px;box-shadow:0 16px 40px rgba(51,51,50,.14);text-align:center}
+  .loginMark{width:66px;height:66px;margin:0 auto 18px;border-radius:20px;background:#5cb86e;color:#fff;display:flex;align-items:center;justify-content:center}
+  .loginMark svg{width:34px;height:34px}
+  .loginCard h1{font-size:23px;letter-spacing:-.6px}.loginCard p{margin:9px 0 22px;color:#8e8f8a;font-size:13px;line-height:1.65}
+  .googleBtn{cursor:pointer;touch-action:manipulation;width:100%;height:50px;border:1px solid #deded9;border-radius:14px;background:#fff;color:#333332;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:11px;box-shadow:0 3px 9px rgba(51,51,50,.06)}
+  .googleBtn svg{width:20px;height:20px}.loginMsg{font-size:12px;color:#c0504d;margin-top:12px;min-height:18px}
+  .userRow{display:flex;align-items:center;gap:11px;padding:8px 4px 16px;border-bottom:1px solid var(--line);margin-bottom:2px}
+  .avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--pl)}
+  .userText{min-width:0;flex:1}.userText b,.userText span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.userText b{font-size:14px}.userText span{font-size:11px;color:var(--sub);margin-top:2px}
+  .syncBadge{position:absolute;right:14px;bottom:calc(78px + env(safe-area-inset-bottom));z-index:16;background:#fff;color:var(--p3);border:1px solid var(--line);border-radius:16px;padding:5px 9px;font-size:10.5px;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.08);opacity:0;transition:.2s;pointer-events:none}
+  .syncBadge.show{opacity:1}
+
 </style>
 </head>
 <body>
@@ -198,6 +214,21 @@
     <div class="sbody" id="sbody"></div>
   </div>
 
+
+  <!-- Firebase 로그인 -->
+  <div id="loginGate">
+    <div class="loginCard">
+      <div class="loginMark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s-7-6.3-7-12a7 7 0 0114 0c0 5.7-7 12-7 12z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+      <h1>나들이 지도</h1>
+      <p>로그인하면 휴대폰과 PC에서<br>내 장소가 자동으로 동기화돼요.</p>
+      <button type="button" class="googleBtn" id="googleLoginBtn">
+        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.9h5.4a4.6 4.6 0 01-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.4z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.2H3.1v2.6A10 10 0 0012 22z"/><path fill="#FBBC05" d="M6.4 13.9A6 6 0 016.1 12c0-.7.1-1.3.3-1.9V7.5H3.1A10 10 0 002 12c0 1.6.4 3.1 1.1 4.5l3.3-2.6z"/><path fill="#EA4335" d="M12 5.9c1.5 0 2.8.5 3.8 1.5l2.9-2.8A9.7 9.7 0 0012 2a10 10 0 00-8.9 5.5l3.3 2.6C7.2 7.7 9.4 5.9 12 5.9z"/></svg>
+        Google로 로그인
+      </button>
+      <div class="loginMsg" id="loginMsg"></div>
+    </div>
+  </div>
+
   <!-- 키 설정 -->
   <div id="setup">
     <div class="sbox2">
@@ -218,6 +249,7 @@
     </div>
   </div>
 
+  <div class="syncBadge" id="syncBadge">저장 중…</div>
   <div class="toast" id="toast"></div>
   <input type="file" id="importFile" accept=".json" hidden onchange="importData(event)">
 </div>
@@ -228,6 +260,16 @@
    (JavaScript 키는 등록한 도메인에서만 동작하므로 공개돼도 안전)
    ============================================================ */
 const KAKAO_KEY = 'b2fc031427d4b586d087d71fbae94f90';
+
+/* Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성의 값을 넣으세요. */
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCQbSh7ufh1t_y81_v1cEn9-7Bxn2HKL5k',
+  authDomain: 'date-app-e99fe.firebaseapp.com',
+  projectId: 'date-app-e99fe',
+  storageBucket: 'date-app-e99fe.firebasestorage.app',
+  messagingSenderId: '833024231883',
+  appId: '1:833024231883:web:19c0f8a5d91815cf0ace4e'
+};
 const STAR = "<svg class=\"st\" viewBox=\"0 0 24 24\"><path d=\"M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z\"/></svg>";
 const PIN = "<svg class=\"pi\" viewBox=\"0 0 24 24\"><path d=\"M12 22s-7-6.3-7-12a7 7 0 0114 0c0 5.7-7 12-7 12z\"/><circle cx=\"12\" cy=\"10\" r=\"2.6\" fill=\"#fff\"/></svg>";
 
@@ -258,12 +300,32 @@ const DEFAULT_PLACES = [
   ['김포 자투라 카페',1,37.6870,126.6150,'자투라 김포']
 ].map((r,i)=>({id:'p'+i,name:r[0],rec:!!r[1],lat:r[2],lng:r[3],geoQuery:r[4],address:'',...EMPTY}));
 
-let places = load();
+let places = [];
+let currentUser = null, db = null, auth = null, unsubscribePlaces = null, syncTimer = null;
 let map, ps, geocoder, overlays = {}, tmpOverlay = null;
 let editingId = null, pending = null, filter = 'all', resCache = [];
 
-function load(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s) return JSON.parse(s); }catch(e){} return DEFAULT_PLACES; }
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(places)); }
+function localPlaces(){ try{ const s=localStorage.getItem(STORAGE_KEY); if(s) return JSON.parse(s); }catch(e){} return null; }
+function save(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(places));
+  if(!currentUser || !db) return;
+  $('syncBadge').classList.add('show');
+  clearTimeout(syncTimer);
+  syncTimer=setTimeout(syncAllPlaces,350);
+}
+async function syncAllPlaces(){
+  if(!currentUser||!db) return;
+  try{
+    const ref=db.collection('users').doc(currentUser.uid).collection('places');
+    const snap=await ref.get();
+    const keep=new Set(places.map(p=>String(p.id)));
+    let batch=db.batch(), ops=0;
+    snap.docs.forEach(d=>{if(!keep.has(d.id)){batch.delete(d.ref);ops++;}});
+    places.forEach(p=>{batch.set(ref.doc(String(p.id)),{...p,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});ops++;});
+    if(ops) await batch.commit();
+    $('syncBadge').textContent='저장됨'; setTimeout(()=>$('syncBadge').classList.remove('show'),900);
+  }catch(e){ console.error(e); $('syncBadge').textContent='저장 실패'; toast('온라인 저장에 실패했어요'); }
+}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function $(id){return document.getElementById(id);}
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2000);}
@@ -296,15 +358,82 @@ function saveKey(){
   const k=$('keyInput').value.replace(/\s/g,''); if(!k){toast('키를 입력해 주세요');return;}
   localStorage.setItem(KEY_STORE,k); location.reload();
 }
-(function boot(){
+(async function boot(){
+  if(!firebaseReady()){
+    $('loginMsg').textContent='index.html의 FIREBASE_CONFIG를 먼저 입력해 주세요.';
+    return;
+  }
+  try{
+    await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js');
+    firebase.initializeApp(FIREBASE_CONFIG);
+    auth=firebase.auth(); db=firebase.firestore();
+    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    $('googleLoginBtn').addEventListener('click', googleLogin);
+    auth.onAuthStateChanged(handleAuth);
+    auth.getRedirectResult().catch(e=>{
+      $('loginMsg').textContent=loginError(e); console.error(e);
+    });
+  }catch(e){ console.error(e); $('loginMsg').textContent='Firebase 연결에 실패했어요. 설정값과 도메인을 확인해 주세요.'; }
+})();
+function firebaseReady(){ return FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.authDomain && FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.appId; }
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s);});}
+async function googleLogin(){
+  if(!auth){$('loginMsg').textContent='Firebase 연결을 준비하고 있어요. 잠시 후 다시 눌러 주세요.';return;}
+  const btn=$('googleLoginBtn'); btn.disabled=true; btn.style.opacity='.65';
+  $('loginMsg').textContent='Google 로그인 화면으로 이동 중…';
+  const provider=new firebase.auth.GoogleAuthProvider();
+  provider.setCustomParameters({prompt:'select_account'});
+  try{
+    const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    if(mobile) await auth.signInWithRedirect(provider);
+    else await auth.signInWithPopup(provider);
+  }catch(e){
+    if(['auth/popup-blocked','auth/cancelled-popup-request','auth/operation-not-supported-in-this-environment'].includes(e.code)) await auth.signInWithRedirect(provider);
+    else {$('loginMsg').textContent=loginError(e); console.error(e); btn.disabled=false; btn.style.opacity='1';}
+  }
+}
+function loginError(e){
+  if(e.code==='auth/unauthorized-domain') return 'Firebase Authentication의 승인된 도메인에 현재 GitHub Pages 도메인을 추가해 주세요.';
+  if(e.code==='auth/operation-not-allowed') return 'Firebase Authentication에서 Google 로그인을 사용 설정해 주세요.';
+  if(e.code==='auth/popup-closed-by-user') return '로그인 창이 닫혔어요. 다시 시도해 주세요.';
+  return '로그인할 수 없어요: '+(e.message||e.code||'설정을 확인해 주세요.');
+}
+async function handleAuth(user){
+  if(!user){currentUser=null;$('loginGate').classList.remove('hide');return;}
+  currentUser=user;$('loginGate').classList.add('hide');
+  await loadUserPlaces();
+  startPlaceListener();
+  if(!map) startKakao(); else renderMarkers();
+}
+async function loadUserPlaces(){
+  const ref=db.collection('users').doc(currentUser.uid).collection('places');
+  const snap=await ref.get();
+  if(snap.empty){
+    const local=localPlaces(); places=(local&&local.length?local:DEFAULT_PLACES).map(p=>({...p}));
+    await syncAllPlaces();
+  }else places=snap.docs.map(d=>({id:d.id,...d.data(),updatedAt:undefined}));
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(places));
+  renderMarkers();
+}
+function startPlaceListener(){
+  if(unsubscribePlaces) unsubscribePlaces();
+  unsubscribePlaces=db.collection('users').doc(currentUser.uid).collection('places').onSnapshot(snap=>{
+    places=snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return{id:d.id,...x};});
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(places)); renderMarkers();
+    if($('lbody')) renderListBody(filter==='rec'?'rec':'all');
+  },e=>{console.error(e);toast('데이터 동기화에 실패했어요');});
+}
+async function logout(){ if(confirm('로그아웃할까요?')){if(unsubscribePlaces)unsubscribePlaces();await auth.signOut();location.reload();} }
+function startKakao(){
   const key=getKey();
-  if(location.protocol==='file:'||!key){ showSetup(); return; }
+  if(location.protocol==='file:'||!key){showSetup();return;}
   const s=document.createElement('script');
   s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+encodeURIComponent(key)+'&libraries=services&autoload=false';
-  s.onload=()=>{ if(!window.kakao||!kakao.maps||!kakao.maps.load){diagnose(key);return;} try{kakao.maps.load(init);}catch(e){diagnose(key);} };
-  s.onerror=()=>diagnose(key);
-  document.head.appendChild(s);
-})();
+  s.onload=()=>{if(!window.kakao||!kakao.maps||!kakao.maps.load){diagnose(key);return;}try{kakao.maps.load(init);}catch(e){diagnose(key);}};
+  s.onerror=()=>diagnose(key);document.head.appendChild(s);
+}
 async function diagnose(key){
   let msg='';
   try{
@@ -525,10 +654,15 @@ function removePlace(id){
 function openSettings(){
   setNav('navSet');
   openSheet('설정',`
+    <div class="userRow">
+      <img class="avatar" src="${esc(currentUser?.photoURL||'')}" onerror="this.style.display='none'">
+      <div class="userText"><b>${esc(currentUser?.displayName||'사용자')}</b><span>${esc(currentUser?.email||'')}</span></div>
+    </div>
     <div class="mrow" onclick="exportData()"><div class="ico">↓</div>백업 저장</div>
     <div class="mrow" onclick="$('importFile').click()"><div class="ico">↑</div>백업 불러오기</div>
     ${KAKAO_KEY?'':`<div class="mrow" onclick="closeSheet();showSetup()"><div class="ico">K</div>API 키 변경</div>`}
-    <div class="empty" style="padding:16px 0 4px;font-size:12px">메모는 이 기기 브라우저에 저장돼요.<br>다른 기기로 옮길 땐 백업 파일을 이용하세요.</div>`);
+    <div class="mrow" onclick="logout()"><div class="ico">↪</div>로그아웃</div>
+    <div class="empty" style="padding:16px 0 4px;font-size:12px">장소 정보는 로그인한 계정에 저장되며<br>휴대폰과 PC에서 자동으로 동기화돼요.</div>`);
 }
 function exportData(){
   const blob=new Blob([JSON.stringify(places,null,2)],{type:'application/json'});
@@ -547,7 +681,6 @@ function importData(e){
   r.readAsText(f); e.target.value='';
 }
 
-renderMarkers();
 </script>
 </body>
 </html>
