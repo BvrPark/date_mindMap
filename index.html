@@ -451,7 +451,7 @@ async function syncAllPlaces(){
   if(!currentUser||!db) return;
   try{
     const ref=db.collection('users').doc(currentUser.uid).collection('places');
-    const snap=await ref.get();
+    const snap=await readOnlinePlaces(currentUser);
     const keep=new Set(places.map(p=>String(p.id)));
     let batch=db.batch(), ops=0;
     snap.docs.forEach(d=>{if(!keep.has(d.id)){batch.delete(d.ref);ops++;}});
@@ -575,7 +575,7 @@ async function handleAuth(user){
       ]),
       new Promise((_,reject)=>{timer=setTimeout(()=>{
         expired=true;
-        reject(new Error('연결 대기 시간이 초과됐어요.\n'+stages.map+' / '+stages.data+'\n연결을 확인하고 다시 시도해 주세요.'));
+        reject(new Error('연결 대기 시간이 초과됐어요. 연결을 확인하고 다시 시도해 주세요.'));
       },25000);})
     ]);
     if(!active()) return;
@@ -592,38 +592,67 @@ async function handleAuth(user){
       e.code==='unavailable'?'Firestore 서버 연결이 끊겼어요. Wi-Fi 대신 모바일 데이터로도 확인해 주세요. 광고 차단 또는 VPN이 있다면 이 사이트의 연결을 허용해 주세요.':
       e.message||'데이터를 불러오지 못했어요. 다시 시도해 주세요.';
     showMapError('불러오지 못했어요',message+'\n'+stages.map+' / '+stages.data+'\n'+(e.code?'오류 코드: '+e.code:''));
-    if(e.code==='unavailable'){
-      const detail=await diagnoseFirestore(user);
-      if(generation===startupGeneration && detail) showMapError('서버 연결을 확인해 주세요',detail);
-    }
   }finally{clearTimeout(timer);}
 }
-async function diagnoseFirestore(user){
-  // A bounded, authenticated HTTPS read distinguishes API/configuration errors
-  // from the SDK's streaming transport failure. Never opens the map or writes data.
+function decodeFirestoreValue(value){
+  if('nullValue' in value) return null;
+  if('stringValue' in value) return value.stringValue;
+  if('booleanValue' in value) return value.booleanValue;
+  if('integerValue' in value) return Number(value.integerValue);
+  if('doubleValue' in value) return Number(value.doubleValue);
+  if('arrayValue' in value) return (value.arrayValue.values||[]).map(decodeFirestoreValue);
+  if('mapValue' in value) return Object.fromEntries(Object.entries(value.mapValue.fields||{}).map(([key,item])=>[key,decodeFirestoreValue(item)]));
+  if('timestampValue' in value) return firebase.firestore.Timestamp.fromDate(new Date(value.timestampValue));
+  if('geoPointValue' in value) return new firebase.firestore.GeoPoint(value.geoPointValue.latitude,value.geoPointValue.longitude);
+  if('bytesValue' in value) return firebase.firestore.Blob.fromBase64String(value.bytesValue);
+  if('referenceValue' in value) return db.doc(value.referenceValue.split('/documents/')[1]);
+  throw new Error('서버 데이터 형식을 읽을 수 없어요.');
+}
+async function readOnlinePlaces(user){
   const controller=new AbortController();
   let timer;
   try{
     return await Promise.race([
       (async()=>{
         const token=await user.getIdToken();
-        if(controller.signal.aborted) return '';
-        const url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(FIREBASE_CONFIG.projectId)+'/databases/(default)/documents/users/'+encodeURIComponent(user.uid)+'/places?pageSize=1';
-        const response=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal:controller.signal});
-        if(response.ok) return '서버의 일반 연결은 정상이지만 실시간 연결이 실패했어요. 브라우저를 새로고침하거나 다른 네트워크에서 다시 시도해 주세요.\n확인 코드: realtime-connection-failed';
-        const body=await response.json();
-        const error=body.error||{};
-        return 'Firestore 서버가 요청을 거절했어요. 아래 오류로 Firebase 프로젝트 설정을 확인해 주세요.\n'+(error.status||response.status)+'\n'+(error.message||'서버 응답을 확인할 수 없어요.');
+        const docs=[];
+        let pageToken='';
+        do{
+          if(controller.signal.aborted) throw new Error('취소된 서버 요청');
+          const url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(FIREBASE_CONFIG.projectId)+'/databases/(default)/documents/users/'+encodeURIComponent(user.uid)+'/places?pageSize=300'+(pageToken?'&pageToken='+encodeURIComponent(pageToken):'');
+          const response=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store',signal:controller.signal});
+          const body=await response.json();
+          if(!response.ok){
+            const detail=body.error||{};
+            const error=new Error('서버 조회가 실패했어요 ('+response.status+').\n'+(detail.message||'서버 설정과 연결을 확인해 주세요.'));
+            error.code=detail.status||'http-'+response.status;
+            throw error;
+          }
+          for(const doc of body.documents||[]){
+            const path=doc.name.split('/documents/')[1];
+            const fields=Object.fromEntries(Object.entries(doc.fields||{}).filter(([key])=>key!=='updatedAt').map(([key,value])=>[key,decodeFirestoreValue(value)]));
+            docs.push({id:path.split('/').pop(),ref:db.doc(path),data:()=>({...fields})});
+          }
+          pageToken=body.nextPageToken||'';
+        }while(pageToken);
+        return {empty:docs.length===0,docs};
       })(),
-      new Promise(resolve=>{timer=setTimeout(()=>{controller.abort();resolve('Firestore 서버의 일반 연결도 확인하지 못했어요. 다른 네트워크에서 다시 시도해 주세요.\n확인 코드: server-connection-timeout');},5000);})
+      new Promise((_,reject)=>{timer=setTimeout(()=>{
+        const error=new Error('Firestore 서버가 15초 안에 응답하지 않았어요. 다른 네트워크에서 다시 시도해 주세요.');
+        error.code='https-timeout';reject(error);controller.abort();
+      },15000);})
     ]);
-  }catch(e){
-    return 'Firestore 서버에 직접 연결하지 못했어요. 인터넷 연결, VPN 또는 이 사이트의 요청 차단 여부를 확인해 주세요.\n확인 코드: server-connection-failed';
+  }catch(error){
+    if(error instanceof TypeError){
+      const networkError=new Error('Firestore HTTPS 연결에 실패했어요. 네트워크 또는 브라우저의 요청 차단 여부를 확인해 주세요.');
+      networkError.code='https-network-error';throw networkError;
+    }
+    throw error;
   }finally{clearTimeout(timer);controller.abort();}
 }
 async function loadUserPlaces(user,active,report=()=>{}){
   const ref=db.collection('users').doc(user.uid).collection('places');
-  let snap=await ref.get({source:'server'});
+  let snap=await readOnlinePlaces(user);
   if(!active()) throw new Error('취소된 요청');
   if(snap.empty){
     // Preserve first-use migration only after the server confirms an empty account.
@@ -635,7 +664,7 @@ async function loadUserPlaces(user,active,report=()=>{}){
     await batch.commit();
     if(!active()) throw new Error('취소된 요청');
     report('저장한 서버 데이터 확인 중');
-    snap=await ref.get({source:'server'});
+    snap=await readOnlinePlaces(user);
   }
   if(!active()) throw new Error('취소된 요청');
   return snap.docs.map(d=>{const x=d.data();delete x.updatedAt;return{id:d.id,...x};});
